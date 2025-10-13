@@ -1,0 +1,173 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../routes.dart';
+import '../services/auth_service.dart';
+
+class PendingApprovalScreen extends StatefulWidget {
+  const PendingApprovalScreen({super.key});
+
+  @override
+  State<PendingApprovalScreen> createState() => _PendingApprovalScreenState();
+}
+
+class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
+  bool _checking = false;
+  String? _error;
+
+  Future<void> _logout() async {
+    try {
+      // لو عندك دالة جاهزة في AuthService
+      await AuthService.logout();
+    } catch (_) {
+      // fallback
+      await FirebaseAuth.instance.signOut();
+    }
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
+  }
+
+  Future<void> _checkAgain() async {
+    setState(() {
+      _checking = true;
+      _error = null;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+        return;
+      }
+
+      final uid = user.uid;
+      final usersRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      final userSnap = await usersRef.get();
+
+      if (!userSnap.exists) {
+        setState(() => _error = 'User profile not found.');
+        return;
+      }
+
+      final data = userSnap.data()!;
+      final role = (data['role'] ?? '').toString();
+      final approved = (data['approved'] ?? false) == true;
+
+      // لو المستخدم أصلاً Approved → يروح للـ RoleRouter
+      if (approved) {
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.roleRouter, (_) => false);
+        return;
+      }
+
+      // لو Hospital Admin نتأكد من المستشفى كذلك
+      if (role == 'hospitaladmin') {
+        final hospId = data['hospitalId']?.toString();
+        if (hospId != null && hospId.isNotEmpty) {
+          final hospSnap = await FirebaseFirestore.instance
+              .collection('hospitals')
+              .doc(hospId)
+              .get();
+
+          final hospApproved = hospSnap.exists &&
+              (hospSnap.data()?['status']?.toString() == 'approved');
+
+          // أحياناً الهيد أدمن يوافق المستشفى أولاً → نحدّث approved للمستخدم وننقله
+          if (hospApproved) {
+            // المستخدم مسموح يعدّل نفسه حسب قواعدنا
+            await usersRef.set({'approved': true}, SetOptions(merge: true));
+            if (!mounted) return;
+            Navigator.pushNamedAndRemoveUntil(context, AppRoutes.roleRouter, (_) => false);
+            return;
+          }
+        }
+      }
+
+      // لسه معلّق
+      setState(() => _error = 'Still pending. Please try again later.');
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Pending Approval"),
+        automaticallyImplyLeading: false,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.hourglass_empty, size: 96, color: Colors.orange),
+            const SizedBox(height: 16),
+            const Text(
+              "Your request has been submitted!",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "We are reviewing your registration.\nYou will be notified once your request is approved.",
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            if (email.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text("Signed in as: $email",
+                  style: const TextStyle(color: Colors.black54)),
+            ],
+            const SizedBox(height: 20),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _checking ? null : _checkAgain,
+                    icon: _checking
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : const Icon(Icons.refresh),
+                    label: const Text("Check again"),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                    ),
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    label: const Text("Logout",
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

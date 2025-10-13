@@ -1,0 +1,87 @@
+{
+  "project_info": {
+    "project_number": "862995028469",
+    "firebase_url": "https://hospital-appointment-51250-default-rtdb.firebaseio.com",
+    "project_id": "hospital-appointment-51250",
+    "storage_bucket": "hospital-appointment-51250.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862995028469:android:2099d88c33db2554f1e8bc",
+        "android_client_info": {
+          "package_name": "com.example.hos_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWS8I7WJEHpUA0HFnueoTo4IRfp-kiRTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862995028469:android:369ba23f6411683af1e8bc",
+        "android_client_info": {
+          "package_name": "com.example.hospapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWS8I7WJEHpUA0HFnueoTo4IRfp-kiRTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862995028469:android:0ed143eef081014bf1e8bc",
+        "android_client_info": {
+          "package_name": "com.example.hospital_appointment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWS8I7WJEHpUA0HFnueoTo4IRfp-kiRTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862995028469:android:fe9d60ef79f4a6aaf1e8bc",
+        "android_client_info": {
+          "package_name": "com.example.hospital_appointment_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWS8I7WJEHpUA0HFnueoTo4IRfp-kiRTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
