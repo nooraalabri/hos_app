@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../routes.dart';
-import '../services/auth_service.dart';
 import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -18,30 +21,100 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   @override
-  void dispose() { _email.dispose(); _pass.dispose(); super.dispose(); }
+  void dispose() {
+    _email.dispose();
+    _pass.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
-      print("🔑 Trying login with Email: '${_email.text.trim()}', Password: '${_pass.text}'");
+      // 🔹 تسجيل الدخول
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _pass.text.trim(),
+      );
 
-      await AuthService.login(_email.text.trim(), _pass.text.trim());
-
-      if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.roleRouter);
-    } catch (e) {
-      String msg = e.toString();
-      if (msg.contains("invalid-credential")) {
-        msg = "Invalid email or password.";
-      } else if (msg.contains("user-not-found")) {
-        msg = "No account found for this email.";
-      } else if (msg.contains("wrong-password")) {
-        msg = "Incorrect password.";
+      final uid = cred.user?.uid;
+      if (uid == null) {
+        throw Exception("UID is null");
       }
+
+      // 🔹 جلب الدور من Firestore
+      final role = await _getUserRole(uid);
+      if (role == null) {
+        setState(() => _error = "User profile not found in Firestore.");
+        return;
+      }
+
+      // 🔹 حفظ FCM Token في Firestore
+      await _saveFcmToken(uid);
+
+      if (!mounted) return;
+
+      // 🔹 التوجيه حسب الدور
+      switch (role) {
+        case 'headadmin':
+          _go(AppRoutes.headAdminHome);
+          break;
+        case 'hospitaladmin':
+          _go(AppRoutes.hospitalAdminHome);
+          break;
+        case 'doctor':
+          _go(AppRoutes.doctorHome);
+          break;
+        case 'patient':
+          _go(AppRoutes.patientHome);
+          break;
+        default:
+          setState(() => _error = "Unknown role: $role");
+      }
+    } on FirebaseAuthException catch (e) {
+      String msg = "Login failed.";
+      if (e.code == 'user-not-found') msg = "No account found for this email.";
+      if (e.code == 'wrong-password') msg = "Incorrect password.";
+      if (e.code == 'invalid-credential') msg = "Invalid email or password.";
       setState(() => _error = msg);
+    } catch (e) {
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+
+  Future<void> _saveFcmToken(String uid) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'fcmToken': token,
+          'lastLogin': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint("⚠️ Error saving FCM token: $e");
+    }
+  }
+
+  // ✅ جلب الدور من Firestore
+  Future<String?> _getUserRole(String uid) async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    return doc.data()?['role'] as String?;
+  }
+
+  // ✅ التنقل إلى الصفحة المناسبة
+  void _go(String route) {
+    Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
   }
 
   @override
@@ -55,27 +128,30 @@ class _LoginScreenState extends State<LoginScreen> {
               key: _form,
               child: Column(
                 children: [
-                  Image.asset(
-                    'assets/logo.png',
-                    height: 120,
-                  ),
+                  Image.asset('assets/logo.png', height: 120),
                   const SizedBox(height: 10),
-                  Text('welcome back', style: Theme.of(context).textTheme.headlineMedium),
+                  Text('Welcome back', style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 20),
+
+                  // Email
                   AppInput(
                     controller: _email,
                     label: 'E-mail',
                     hint: 'Enter your email',
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v==null || !v.contains('@')) ? 'Enter valid email' : null,
+                    validator: (v) =>
+                    (v == null || !v.contains('@')) ? 'Enter valid email' : null,
                   ),
                   const SizedBox(height: 12),
+
+                  // Password
                   PasswordInput(
                     controller: _pass,
                     label: 'Password',
-                    validator: (v) => v!=null && v.length>=8 ? null : 'Min 8 chars',
+                    validator: (v) => v != null && v.length >= 8 ? null : 'Min 8 chars',
                   ),
                   const SizedBox(height: 8),
+
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
@@ -83,24 +159,34 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Forgot Password?'),
                     ),
                   ),
-                  if (_error!=null) Text(_error!, style: const TextStyle(color: Colors.red)),
-                  const SizedBox(height: 6),
+
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    ),
+
+                  // Login button
                   ElevatedButton(
-                    onPressed: _loading?null:_submit,
+                    onPressed: _loading ? null : _submit,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      child: _loading ? const CircularProgressIndicator() : const Text('login'),
+                      child: _loading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Login'),
                     ),
                   ),
+
                   const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('new user? '),
+                      const Text('New user? '),
                       TextButton(
-                        onPressed: ()=>Navigator.pushReplacementNamed(context, AppRoutes.selectRole),
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(context, AppRoutes.selectRole),
                         child: const Text('Sign up'),
-                      )
+                      ),
                     ],
                   ),
                 ],

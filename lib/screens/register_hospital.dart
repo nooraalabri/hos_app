@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
 import '../services/auth_service.dart';
@@ -20,6 +19,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
+  final _confirmPass = TextEditingController();
   final _location = TextEditingController();
 
   bool _loading = false;
@@ -30,11 +30,11 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     _name.dispose();
     _email.dispose();
     _pass.dispose();
+    _confirmPass.dispose();
     _location.dispose();
     super.dispose();
   }
 
-  // ✅ Password strength check
   bool _isStrong(String v) {
     if (v.length < 8) return false;
     final rUpper = RegExp(r'[A-Z]');
@@ -55,36 +55,37 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     });
 
     try {
-      // 1) إنشاء حساب hospitaladmin
+      // 🔹 إنشاء حساب hospitaladmin
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
         role: 'hospitaladmin',
         name: _name.text.trim(),
       );
+
       final cred = await AuthService.registerWithEmail(
         email: _email.text.trim(),
         password: _pass.text,
         profile: profile,
       );
+
       final uid = cred.user!.uid;
 
-      // 2) إنشاء مستشفى جديد pending
-      final hospitalId = await FS.createHospital(
+      // 🏥 إنشاء مستشفى جديد pending
+      await FS.createHospital(
         name: _name.text.trim(),
         email: _email.text.trim(),
         uid: uid,
       );
 
-      // 3) إنشاء user مربوط بالمستشفى + approved=false
+      // 👤 إنشاء user مربوط بالمستشفى + approved=false
       await FS.createUser(uid, {
         'role': 'hospitaladmin',
-        'hospitalId': uid, // نفس uid
+        'hospitalId': uid,
         'approved': false,
       });
 
-
-      // 4) تحديث موقع المستشفى إذا متوفر
+      // 📍 تحديث موقع المستشفى إذا متوفر
       if (_location.text.trim().isNotEmpty) {
         await FS.updateHospitalLocation(
           uid,
@@ -94,24 +95,46 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
         );
       }
 
-      // 5) تنبيه الهيد أدمن
+      // 📩 تنبيه الهيد أدمن عبر NotifyService
       try {
         await NotifyService.notifyHeadAdmin(_name.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Notification sent to Head Admin successfully.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
         debugPrint("✅ HeadAdmin notified about hospital request");
       } catch (e) {
         debugPrint("⚠️ NotifyService error notifyHeadAdmin: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ Failed to notify Head Admin: $e'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
 
       if (!mounted) return;
 
-      // ✅ تحويل لصفحة Pending Approval
+      // ⏳ تحويل المستخدم لصفحة Pending Approval
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.pendingApproval, // 👈 لازم تعرفي هذا في routes
+        AppRoutes.pendingApproval,
             (_) => false,
       );
     } catch (e) {
       setState(() => _error = e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -128,14 +151,21 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Register Hospital',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center),
+                Center(
+                  child: Image.asset('assets/logo.png', height: 120),
+                ),
+                const SizedBox(height: 10),
+
+                Text(
+                  'Register Hospital',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
 
                 AppInput(
                   controller: _name,
-                  label: 'Hospital',
+                  label: 'Hospital Name',
                   hint: 'Enter hospital name',
                   validator: (v) =>
                   (v == null || v.isEmpty) ? 'Required' : null,
@@ -156,7 +186,15 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                   label: 'Password',
                   validator: (v) => (v != null && _isStrong(v))
                       ? null
-                      : 'Min 8, upper/lower/number/symbol',
+                      : 'Min 8 chars, must include upper/lower/number/symbol',
+                ),
+                const SizedBox(height: 12),
+
+                PasswordInput(
+                  controller: _confirmPass,
+                  label: 'Confirm Password',
+                  validator: (v) =>
+                  (v == _pass.text) ? null : 'Passwords do not match',
                 ),
                 const SizedBox(height: 12),
 
@@ -169,17 +207,38 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                 ),
 
                 const SizedBox(height: 18),
+
                 if (_error != null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
 
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     child: _loading
-                        ? const CircularProgressIndicator()
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Sign up'),
                   ),
+                ),
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account? '),
+                    TextButton(
+                      onPressed: () => Navigator.pushReplacementNamed(
+                          context, AppRoutes.login),
+                      child: const Text('Login'),
+                    ),
+                  ],
                 ),
               ],
             ),

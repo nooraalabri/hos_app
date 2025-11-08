@@ -1,1 +1,33 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"hospital-appointment-51250","appId":"1:862995028469:android:2099d88c33db2554f1e8bc","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"hospital-appointment-51250","configurations":{"android":"1:862995028469:android:2099d88c33db2554f1e8bc","ios":"1:862995028469:ios:47c526cb4adfdcccf1e8bc","macos":"1:862995028469:ios:47c526cb4adfdcccf1e8bc","web":"1:862995028469:web:047cb99b19645fcdf1e8bc","windows":"1:862995028469:web:610952ce2007068ff1e8bc"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "hospital-appointment-51250",
+          "appId": "1:862995028469:android:2099d88c33db2554f1e8bc",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "hospital-appointment-51250",
+          "configurations": {
+            "android": "1:862995028469:android:2099d88c33db2554f1e8bc",
+            "ios": "1:862995028469:ios:47c526cb4adfdcccf1e8bc",
+            "macos": "1:862995028469:ios:47c526cb4adfdcccf1e8bc",
+            "web": "1:862995028469:web:047cb99b19645fcdf1e8bc",
+            "windows": "1:862995028469:web:610952ce2007068ff1e8bc"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

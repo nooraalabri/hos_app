@@ -17,19 +17,19 @@ class RegisterPatientScreen extends StatefulWidget {
 class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   final _form = GlobalKey<FormState>();
 
-  final _name  = TextEditingController();
-  final _dob   = TextEditingController();
+  final _name = TextEditingController();
+  final _dob = TextEditingController();
   final _civil = TextEditingController();
   final _email = TextEditingController();
-  final _pass  = TextEditingController();
+  final _pass = TextEditingController();
   final _pass2 = TextEditingController();
 
   bool _loading = false;
   String? _error;
 
-  // باسورد قوي: حرف صغير + كبير + رقم + رمز خاص + طول ≥ 8
+  // تحقق من قوة الباسورد: صغير + كبير + رقم + رمز + طول ≥ 8
   final RegExp _passRe = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$'
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$',
   );
 
   @override
@@ -47,7 +47,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     final now = DateTime.now();
     final initial = DateTime(now.year - 18, now.month, now.day);
     final first = DateTime(now.year - 100, 1, 1);
-    final last  = now;
+    final last = now;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -55,18 +55,22 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       lastDate: last,
     );
     if (picked != null) {
-      _dob.text = "${picked.year.toString().padLeft(4,'0')}-"
-          "${picked.month.toString().padLeft(2,'0')}-"
-          "${picked.day.toString().padLeft(2,'0')}";
+      _dob.text =
+      "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       setState(() {});
     }
   }
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
+      // إنشاء الحساب
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -80,18 +84,28 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         profile: profile,
       );
 
-      await FS.createUser(cred.user!.uid, {
+      final uid = cred.user?.uid;
+      if (uid == null) throw Exception('Registration failed: UID is null.');
+
+      // تخزين بيانات إضافية في Firestore
+      await FS.createUser(uid, {
         'dob': _dob.text.trim(),
         'civilNumber': _civil.text.trim(),
+        'role': 'patient',
       });
 
       if (!mounted) return;
+
+      // ✅ بعد التسجيل يذهب مباشرة إلى صفحة المريض الجديدة
       Navigator.pushNamedAndRemoveUntil(
-          context, AppRoutes.roleRouter, (_) => false);
+        context,
+        AppRoutes.patientHome,
+            (route) => false,
+      );
     } catch (e) {
-      setState(()=>_error = e.toString());
+      setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(()=>_loading=false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -108,20 +122,23 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AppLogo(size: 90),
-                Text('Register',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center),
+                Text(
+                  'Register',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 14),
 
-                // Name
+                // الاسم
                 AppInput(
                   controller: _name,
                   label: 'My Name',
-                  validator: (v)=> (v==null||v.isEmpty)?'Required':null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
 
-                // Date of Birth (with date picker)
+                // تاريخ الميلاد
                 GestureDetector(
                   onTap: _pickDob,
                   child: AbsorbPointer(
@@ -129,41 +146,47 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                       controller: _dob,
                       label: 'Date of Birth',
                       hint: 'YYYY-MM-DD',
-                      validator: (v)=> (v==null||v.isEmpty)?'Required':null,
+                      validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Required' : null,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // Civil Number
+                // رقم البطاقة المدنية (8 أرقام بالضبط)
                 AppInput(
                   controller: _civil,
                   label: 'Civil Number',
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v==null || v.isEmpty) return 'Required';
-                    if (!RegExp(r'^\d{6,}$').hasMatch(v)) return 'Numbers only (min 6)';
+                    if (v == null || v.isEmpty) return 'Required';
+                    if (!RegExp(r'^\d{8}$').hasMatch(v)) {
+                      return 'Must be exactly 8 digits';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 12),
 
-                // Email
+                // الإيميل
                 AppInput(
                   controller: _email,
                   label: 'Email',
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v)=> (v==null || !v.contains('@'))
-                      ? 'Valid email required' : null,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Valid email required'
+                      : null,
                 ),
                 const SizedBox(height: 12),
 
-                // Password
+                // الباسورد
                 PasswordInput(
                   controller: _pass,
                   label: 'Password',
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password is required';
+                    if (v == null || v.isEmpty) {
+                      return 'Password is required';
+                    }
                     if (!_passRe.hasMatch(v)) {
                       return 'Min 8 incl. upper, lower, number & special';
                     }
@@ -172,25 +195,33 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Confirm Password
+                // تأكيد الباسورد
                 PasswordInput(
                   controller: _pass2,
                   label: 'Confirm Password',
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please confirm password';
-                    if (v != _pass.text) return 'Passwords do not match';
+                    if (v == null || v.isEmpty) {
+                      return 'Please confirm password';
+                    }
+                    if (v != _pass.text) {
+                      return 'Passwords do not match';
+                    }
                     return null;
                   },
                 ),
 
                 const SizedBox(height: 18),
-                if (_error!=null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                if (_error != null)
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
 
                 ElevatedButton(
-                  onPressed: _loading?null:_submit,
+                  onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 12),
                     child: _loading
                         ? const CircularProgressIndicator()
                         : const Text('Sign Up'),
@@ -206,7 +237,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                       const Text('Already have an account? '),
                       InkWell(
                         onTap: () => Navigator.pushNamedAndRemoveUntil(
-                            context, AppRoutes.login, (_) => false),
+                          context,
+                          AppRoutes.login,
+                              (_) => false,
+                        ),
                         child: const Text(
                           'Log in',
                           style: TextStyle(

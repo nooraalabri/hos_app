@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Patient Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root { --brand:#7A003C; }
+        body { font-family: Arial, sans-serif; background:#f7f7f7; margin:0; padding:24px; }
+        .card { background:#fff; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.08);
+                padding:22px; max-width:520px; margin:40px auto; }
+        .title { color:var(--brand); margin:0 0 8px; font-size:22px; }
+        .row { display:flex; gap:8px; margin:8px 0; }
+        .label { width:160px; font-weight:600; color:#333; }
+        .value { flex:1; color:#111; }
+        .muted { color:#666; font-size:13px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2 class="title" id="name">Loading...</h2>
+
+    <div class="row"><div class="label">Email</div><div class="value" id="email"></div></div>
+    <div class="row"><div class="label">Phone</div><div class="value" id="phone"></div></div>
+    <div class="row"><div class="label">Hospital</div><div class="value" id="hospitalName"></div></div>
+    <div class="row"><div class="label">National ID</div><div class="value" id="civilNumber"></div></div>
+    <div class="row"><div class="label">DOB</div><div class="value" id="dob"></div></div>
+    <div class="row"><div class="label">Blood Type</div><div class="value" id="bloodType"></div></div>
+    <div class="row"><div class="label">Weight (kg)</div><div class="value" id="weight"></div></div>
+    <div class="row"><div class="label">Height (cm)</div><div class="value" id="height"></div></div>
+    <div class="row"><div class="label">Chronic</div><div class="value" id="chronic"></div></div>
+    <div class="row"><div class="label">Condition</div><div class="value" id="condition"></div></div>
+    <div class="row"><div class="label">Allergies</div><div class="value" id="allergies"></div></div>
+    <div class="row"><div class="label">Medications</div><div class="value" id="medications"></div></div>
+
+    <p class="muted" id="status"></p>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTCbGBlsVLOg1fsCSXUfPwymyGwBYjq-k",
+      authDomain: "hospital-appointment-51250.firebaseapp.com",
+      projectId: "hospital-appointment-51250",
+      storageBucket: "hospital-appointment-51250.appspot.com",
+      messagingSenderId: "862995028469",
+      appId: "1:862995028469:web:047cb99b19645fcdf1e8bc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+
+    const $ = (id) => document.getElementById(id);
+    const set = (id, val) => $(id).textContent = val ?? '—';
+
+    async function load() {
+      try {
+        if (!id) throw new Error("No ID in URL");
+
+        const ref = doc(db, "users", id); // أو "patients" حسب قاعدة بياناتك
+        const snap = await getDoc(ref);
+
+        if (!snap.exists()) throw new Error("Patient not found");
+
+        const d = snap.data() || {};
+
+        set('name', d.name || '—');
+        set('email', d.email || '—');
+        set('phone', d.phone || '—');
+        set('hospitalName', d.hospitalName || '—');
+        set('civilNumber', d.civilNumber || '—');
+        set('dob', d.dob || '—');
+        set('bloodType', d.bloodType || '—');
+        set('weight', d.weight || '—');
+        set('height', d.height || '—');
+        set('chronic', (Array.isArray(d.chronic) && d.chronic.length) ? d.chronic.join(', ') : '—');
+        set('condition', d.generalCondition || '—');
+        set('allergies', d.allergies || '—');
+        set('medications', d.medications || '—');
+      } catch (e) {
+        console.error(e);
+        set('name', 'Error loading profile');
+      }
+    }
+
+    load();
+</script>
+</body>
+</html>

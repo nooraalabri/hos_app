@@ -4,9 +4,11 @@ import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
-import '../services/notify_service.dart';
 import '../models/app_user.dart';
 import '../routes.dart';
+import '../services/email_api.dart'; // 🟢 استدعاء ملف الإيميل
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RegisterDoctorScreen extends StatefulWidget {
   const RegisterDoctorScreen({super.key});
@@ -31,7 +33,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
   String? _error;
 
   final RegExp _passRe = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$'
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$',
   );
 
   @override
@@ -67,8 +69,40 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
     super.dispose();
   }
 
+  // ✅ إرسال إشعار للهوسبتل أدمن
+  Future<void> _notifyHospAdmin({
+    required String doctorName,
+    required String hospAdminEmail,
+    required String hospitalId,
+  }) async {
+    final apiUrl = '${EmailApiConfig.baseUrl}/notify-hospadmin'; // 🔗 يأخذ العنوان الصحيح تلقائيًا
+
+    try {
+      final res = await http
+          .post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'doctorName': doctorName,
+          'hospAdminEmail': hospAdminEmail,
+          'hospitalId': hospitalId,
+        }),
+      )
+          .timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        debugPrint('✅ Email sent successfully to hospital admin.');
+      } else {
+        debugPrint('❌ Failed to send email: ${res.statusCode} - ${res.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error sending email: $e');
+    }
+  }
+
   Future<void> _submit() async {
     if (!_form.currentState!.validate() || hospitalId == null) return;
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -84,6 +118,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
         specialization: _spec.text.trim(),
       );
 
+      // 🔐 تسجيل الدكتور في Firebase
       final cred = await AuthService.registerWithEmail(
         email: _email.text.trim(),
         password: _pass.text,
@@ -91,30 +126,45 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
       );
 
       final uid = cred.user!.uid;
-      await FS.createUser(uid, {'approved': false});
 
-      // ✅ تنبيه الهوسبيتل أدمن
+      // 🧾 إنشاء مستند المستخدم في Firestore
+      await FS.createUser(uid, {
+        'role': 'doctor',
+        'name': _name.text.trim(),
+        'email': _email.text.trim(),
+        'hospitalId': hospitalId,
+        'specialization': _spec.text.trim(),
+        'approved': false,
+      });
+
+      // 📬 إرسال إشعار للإيميل الخاص بالهوسبتل
       try {
-        final chosen = hospitals.firstWhere(
+        final selectedHospital = hospitals.firstWhere(
               (h) => h['id'] == hospitalId,
-          orElse: () => <String, dynamic>{},
+          orElse: () => {},
         );
-        final hospitalEmail = chosen['email'] as String?;
-        if (hospitalEmail != null && hospitalEmail.isNotEmpty) {
-          await NotifyService.notifyHospAdmin(
+
+        final hospEmail = selectedHospital['email']?.toString();
+        if (hospEmail != null && hospEmail.isNotEmpty) {
+          debugPrint('📨 Sending email to: $hospEmail');
+          await _notifyHospAdmin(
             doctorName: _name.text.trim(),
-            hospAdminEmail: hospitalEmail,
+            hospAdminEmail: hospEmail,
             hospitalId: hospitalId!,
           );
+        } else {
+          debugPrint('⚠️ No valid hospital email found.');
         }
       } catch (e) {
-        debugPrint("NotifyService error notifyHospAdmin: $e");
+        debugPrint('❌ notifyHospAdmin() failed: $e');
       }
 
       if (!mounted) return;
+
+      // ⏳ تحويل المستخدم لصفحة الانتظار
       Navigator.pushNamedAndRemoveUntil(
         context,
-        AppRoutes.roleRouter,
+        AppRoutes.pendingApproval,
             (_) => false,
       );
     } catch (e) {
@@ -127,7 +177,9 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
   @override
   Widget build(BuildContext context) {
     if (_fetchingHospitals) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final noHospitals = hospitals.isEmpty;
@@ -143,11 +195,14 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AppLogo(size: 90),
-                Text('Register Doctor',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center),
+                Text(
+                  'Register Doctor',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 12),
 
+                // ====== EMAIL ======
                 AppInput(
                   controller: _email,
                   label: 'E-mail',
@@ -157,6 +212,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // ====== HOSPITAL DROPDOWN ======
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(labelText: 'Hospital'),
                   value: hospitalId,
@@ -173,6 +229,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // ====== PASSWORD ======
                 PasswordInput(
                   controller: _pass,
                   label: 'Password',
@@ -186,6 +243,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // ====== CONFIRM PASSWORD ======
                 PasswordInput(
                   controller: _pass2,
                   label: 'Confirm password',
@@ -197,6 +255,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // ====== FULL NAME ======
                 AppInput(
                   controller: _name,
                   label: 'Full name',
@@ -204,6 +263,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // ====== SPECIALIZATION ======
                 AppInput(
                   controller: _spec,
                   label: 'Specialization',
@@ -214,10 +274,12 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 if (_error != null)
                   Text(_error!, style: const TextStyle(color: Colors.red)),
 
+                // ====== BUTTON ======
                 ElevatedButton(
                   onPressed: (_submitting || noHospitals) ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                     child: _submitting
                         ? const CircularProgressIndicator()
                         : const Text('Sign up'),

@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../admin/hospital_doctor_reports_screen.dart';
+import '../admin/hospital_patient_reports_screen.dart';
 import '../services/firestore_service.dart';
 import '../widgets/admin_drawer.dart';
 
@@ -141,10 +143,8 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                   'Doctor Reports',
                   icon: Icons.medical_information,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Doctor reports coming soon')),
-                    );
+                    Navigator.pushNamed(
+                        context, HospitalDoctorReportsScreen.route);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -153,10 +153,8 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                   'Patient Reports',
                   icon: Icons.people,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Patient reports coming soon')),
-                    );
+                    Navigator.pushNamed(
+                        context, HospitalPatientReportsScreen.route);
                   },
                 ),
                 const SizedBox(height: 30),
@@ -212,7 +210,8 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
       child: ListTile(
         leading: Icon(icon, color: Colors.white),
         title: Text(title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right, color: Colors.white),
         onTap: onTap,
       ),

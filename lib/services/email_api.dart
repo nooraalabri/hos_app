@@ -1,13 +1,18 @@
 // lib/services/email_api.dart
-// اختاري الـ baseUrl المناسب لبيئتك تحت
+import 'package:flutter/foundation.dart';
 
 class EmailApiConfig {
-   // للويب (Chrome):
-   static String? baseUrl = 'http://localhost:3000';
+   static String get baseUrl {
+      //  إذا كنتِ تشتغلين على Flutter Web (مثل Chrome)
+      if (kIsWeb) {
+         return 'http://localhost:3000';
+      }
 
-// للـ Android Emulator (AVD):
-// static String? baseUrl = 'http://10.0.2.2:3000';
+      //  إذا كنتِ تشتغلين على Android Emulator
+      return 'http://10.0.2.2:3000';
 
-// لجهاز أندرويد حقيقي على نفس الشبكة (بدّلي IP):
-// static String? baseUrl = 'http://192.168.1.7:3000';
+      //  ولو بعدين تشتغلين من جوال حقيقي على نفس الواي فاي
+      // بدّلي فوق هذا السطر بـ:
+      // return 'http://192.168.1.7:3000';  // ← غيّري IP جهازك
+   }
 }

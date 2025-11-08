@@ -18,7 +18,6 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
   Future<void> _logout() async {
     try {
-      // لو عندك دالة جاهزة في AuthService
       await AuthService.logout();
     } catch (_) {
       // fallback
@@ -85,7 +84,6 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
         }
       }
 
-      // لسه معلّق
       setState(() => _error = 'Still pending. Please try again later.');
     } catch (e) {
       setState(() => _error = e.toString());

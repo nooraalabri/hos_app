@@ -31,7 +31,7 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
 
     final nameCtrl = TextEditingController(text: _hospital?['name'] ?? '');
     final emailCtrl = TextEditingController(text: _hospital?['email'] ?? '');
-    final locationCtrl = TextEditingController(text: _hospital?['location'] ?? '');
+    final addressCtrl = TextEditingController(text: _hospital?['address'] ?? '');
     final aboutCtrl = TextEditingController(text: _hospital?['about'] ?? '');
 
     await showDialog(
@@ -43,7 +43,7 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
             children: [
               TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Name")),
               TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: "Email")),
-              TextField(controller: locationCtrl, decoration: const InputDecoration(labelText: "Location")),
+              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: "Address")),
               TextField(controller: aboutCtrl, decoration: const InputDecoration(labelText: "About")),
             ],
           ),
@@ -55,7 +55,7 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
               await FS.hospitals.doc(_hospital!['id']).set({
                 'name': nameCtrl.text.trim(),
                 'email': emailCtrl.text.trim(),
-                'location': locationCtrl.text.trim(),
+                'address': addressCtrl.text.trim(),
                 'about': aboutCtrl.text.trim(),
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
@@ -72,8 +72,6 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
@@ -81,7 +79,7 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
           IconButton(
             onPressed: _editHospital,
             icon: const Icon(Icons.edit),
-          )
+          ),
         ],
       ),
       drawer: AdminDrawer(hospitalName: _hospital?['name']),
@@ -98,13 +96,6 @@ class _ProfileBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = data['status'] ?? 'pending';
-    final chips = {
-      'approved': Colors.green,
-      'pending': Colors.orange,
-      'rejected': Colors.red,
-    };
-
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -115,17 +106,23 @@ class _ProfileBody extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: const CircleAvatar(radius: 26, child: Icon(Icons.local_hospital)),
-                  title: Text(data['name'] ?? 'Hospital'),
-                  subtitle: Text(data['email'] ?? ''),
-                  trailing: Chip(
-                    label: Text(status),
-                    backgroundColor: (chips[status] ?? Colors.grey).withOpacity(.15),
-                    labelStyle: TextStyle(color: chips[status] ?? Colors.grey),
+                  leading: const CircleAvatar(
+                    radius: 26,
+                    backgroundColor: Color(0xFF2D515C),
+                    child: Icon(Icons.local_hospital, color: Colors.white),
                   ),
+                  title: Text(
+                    data['name'] ?? 'Hospital',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Color(0xFF2D515C),
+                    ),
+                  ),
+                  subtitle: Text(data['email'] ?? ''),
                 ),
                 const SizedBox(height: 12),
-                _kv('Location', data['location'] ?? '—'),
+                _kv('Address', data['address'] ?? '—'),
                 _kv('About', data['about'] ?? '—'),
                 const SizedBox(height: 8),
                 Align(
@@ -134,7 +131,7 @@ class _ProfileBody extends StatelessWidget {
                     onPressed: () => _showDetails(context, data),
                     child: const Text('details'),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -167,9 +164,8 @@ class _ProfileBody extends StatelessWidget {
             const SizedBox(height: 12),
             _kv('Name', d['name'] ?? ''),
             _kv('Email', d['email'] ?? ''),
-            _kv('Location', d['location'] ?? '—'),
+            _kv('Address', d['address'] ?? '—'),
             _kv('About', d['about'] ?? '—'),
-            _kv('Status', d['status'] ?? '—'),
           ],
         ),
       ),

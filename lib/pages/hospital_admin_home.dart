@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../routes.dart';
+import '../widgets/admin_drawer.dart';
 
 class HospitalAdminHome extends StatelessWidget {
   const HospitalAdminHome({super.key});
@@ -20,13 +21,29 @@ class HospitalAdminHome extends StatelessWidget {
         final status = (data?['status'] ?? 'pending') as String;
 
         return Scaffold(
+          drawer: AdminDrawer(hospitalName: name),
           appBar: AppBar(
-            title: Text(name),
+            backgroundColor: const Color(0xFF2D515C),
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+            title: Text(
+              name,
+              style: const TextStyle(
+                color: Color(0xFFE6EBEC),
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            centerTitle: true,
             actions: [
               IconButton(
                 tooltip: 'Logout',
                 onPressed: () => AuthService.logoutAndGoWelcome(context),
-                icon: const Icon(Icons.logout),
+                icon: const Icon(Icons.logout, color: Colors.white),
               ),
             ],
           ),
@@ -35,8 +52,11 @@ class HospitalAdminHome extends StatelessWidget {
               : ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              _HospitalCard(name: name, status: status, email: data?['email']),
-
+              _HospitalCard(
+                name: name,
+                status: status,
+                email: data?['email'],
+              ),
               const SizedBox(height: 16),
 
               _HomeTile(
@@ -61,23 +81,24 @@ class HospitalAdminHome extends StatelessWidget {
                 icon: Icons.pie_chart_outline,
                 onTap: () => Navigator.pushNamed(context, AppRoutes.hospitalReports),
               ),
-              const SizedBox(height: 12),
-
-              _HomeTile(
-                title: 'Review Doctors',
-                subtitle: 'Accept or Reject new requests',
-                icon: Icons.fact_check_outlined,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.approveDoctors),
-              ),
 
               const SizedBox(height: 24),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: const Color(0xFF2D515C),
             onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor),
-            icon: const Icon(Icons.person_add_alt_1),
-            label: const Text('Add doctor'),
+            icon: const Icon(Icons.person_add_alt_1, color: Color(0xFFE6EBEC)),
+            label: const Text(
+              'Add doctor',
+              style: TextStyle(
+                color: Color(0xFFE6EBEC),
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
           ),
+
         );
       },
     );
@@ -88,16 +109,14 @@ class _HospitalCard extends StatelessWidget {
   final String name;
   final String? email;
   final String status;
-  const _HospitalCard({required this.name, this.email, required this.status});
+  const _HospitalCard({
+    required this.name,
+    this.email,
+    required this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (status) {
-      'approved' => Colors.green,
-      'rejected' => Colors.red,
-      _ => Colors.orange,
-    };
-
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
@@ -105,14 +124,22 @@ class _HospitalCard extends StatelessWidget {
         child: ListTile(
           leading: const CircleAvatar(
             radius: 26,
-            child: Icon(Icons.local_hospital),
+            backgroundColor: Color(0xFF2D515C),
+            child: Icon(Icons.local_hospital, color: Colors.white),
           ),
-          title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: email == null ? null : Text(email!),
-          trailing: Chip(
-            label: Text(status),
-            backgroundColor: color.withOpacity(.15),
-            labelStyle: TextStyle(color: color),
+          title: Text(
+            name,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: Color(0xFF2D515C),
+            ),
+          ),
+          subtitle: email == null
+              ? null
+              : Text(
+            email!,
+            style: const TextStyle(color: Colors.black54),
           ),
         ),
       ),

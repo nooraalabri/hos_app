@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hos_app/screens/pending_approval.dart';
 
+import '../patients/patient_home.dart';
 import '../services/firestore_service.dart';
-import '../pages/patient_home.dart';
-import '../pages/doctor_home.dart';
+import 'doctor_home.dart';
 import '../pages/hospital_admin_home.dart';
 import '../pages/head_admin_home.dart';
-import 'pending_screen.dart'; // تأكدي أن الملف موجود في نفس مجلد الشاشات
 
 class RoleRouter extends StatelessWidget {
   const RoleRouter({super.key});
@@ -19,7 +19,6 @@ class RoleRouter extends StatelessWidget {
       return const Scaffold(body: Center(child: Text('Not logged in')));
     }
 
-    // نسمع لتغيرات الوثيقة مباشرة: لما الأدمن يوافق، تتحول الشاشة تلقائيًا
     final stream = FS.users.doc(user.uid).snapshots();
 
     return StreamBuilder<DocumentSnapshot>(
@@ -38,17 +37,17 @@ class RoleRouter extends StatelessWidget {
 
         switch (role) {
           case 'patient':
-          // المريض ما يحتاج موافقة
+
             return const PatientHome();
 
           case 'doctor':
-          // ينتظر موافقة Hospital Admin
-            if (!approved) return const PendingScreen(forRole: 'Doctor');
-            return const DoctorHome();
+
+            if (!approved) return const PendingApprovalScreen();
+            return DoctorHome(doctorId: user.uid);
 
           case 'hospitaladmin':
-          // ينتظر موافقة Head Admin على المستشفى
-            if (!approved) return const PendingScreen(forRole: 'Hospital Admin');
+
+            if (!approved) return const PendingApprovalScreen();
             return const HospitalAdminHome();
 
           case 'headadmin':

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/notify_service.dart';
 
 enum ReportPeriod { weekly, monthly, yearly }
 
@@ -11,6 +12,14 @@ class FS {
   static CollectionReference<Map<String, dynamic>> get otps => _db.collection('otps');
   static CollectionReference<Map<String, dynamic>> get appointments => _db.collection('appointments');
   static CollectionReference<Map<String, dynamic>> get reviews => _db.collection('reviews');
+  static CollectionReference<Map<String, dynamic>> get reports => _db.collection('reports'); // ✅ أضفنا هذا
+
+  // ===== Helpers =====
+  static DateTime _dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
+  static DateTime _dayEnd(DateTime d) => _dayStart(d).add(const Duration(days: 1));
+  static DateTime _weekStart(DateTime d) => _dayStart(d).subtract(Duration(days: d.weekday - 1));
+  static DateTime _weekEnd(DateTime d) => _weekStart(d).add(const Duration(days: 7));
+  static Timestamp _ts(DateTime d) => Timestamp.fromDate(d);
 
   // ===== Users =====
   static Future<void> createUser(String uid, Map<String, dynamic> data) async {
@@ -25,39 +34,25 @@ class FS {
     required String uid,
     required String name,
     required String email,
+    String? address,
+    String? city,
+    String? country,
   }) async {
-    // نخزن المستشفى بنفس uid مال الـ admin
     await hospitals.doc(uid).set({
       'name': name,
       'email': email,
+      'address': address ?? '',
+      'city': city ?? '',
+      'country': country ?? '',
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // تحديث بيانات المستخدم وربطه بالمستشفى
     await users.doc(uid).set({
       'role': 'hospitaladmin',
       'hospitalId': uid,
       'approved': false,
     }, SetOptions(merge: true));
-  }
-
-  static Future<List<Map<String, dynamic>>> listHospitals({bool onlyApproved = true}) async {
-    Query<Map<String, dynamic>> q = hospitals;
-    if (onlyApproved) {
-      q = q.where('status', isEqualTo: 'approved');
-    } else {
-      q = q.orderBy('name');
-    }
-
-    final snap = await q.get();
-    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-  }
-
-  static Future<Map<String, dynamic>?> hospitalForAdmin(String adminUid) async {
-    final doc = await hospitals.doc(adminUid).get();
-    if (!doc.exists) return null;
-    return {'id': doc.id, ...doc.data()!};
   }
 
   static Future<void> updateHospitalLocation(
@@ -75,6 +70,23 @@ class FS {
     return hospitals.doc(hospitalId).set(data, SetOptions(merge: true));
   }
 
+  static Future<List<Map<String, dynamic>>> listHospitals({bool onlyApproved = true}) async {
+    Query<Map<String, dynamic>> q = hospitals;
+    if (onlyApproved) {
+      q = q.where('status', isEqualTo: 'approved');
+    } else {
+      q = q.orderBy('name');
+    }
+    final snap = await q.get();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+  }
+
+  static Future<Map<String, dynamic>?> hospitalForAdmin(String adminUid) async {
+    final doc = await hospitals.doc(adminUid).get();
+    if (!doc.exists) return null;
+    return {'id': doc.id, ...doc.data()!};
+  }
+
   static Stream<QuerySnapshot<Map<String, dynamic>>> pendingHospitalsStream() {
     return hospitals.where('status', isEqualTo: 'pending').snapshots();
   }
@@ -87,12 +99,24 @@ class FS {
     final snap = await ref.get();
     if (!snap.exists) return;
 
+    final data = snap.data()!;
+    final hospitalEmail = (data['email'] ?? '').toString();
+    final hospitalName = (data['name'] ?? '').toString();
+
     await ref.update({
       'status': approve ? 'approved' : 'rejected',
       'approvedAt': FieldValue.serverTimestamp(),
     });
 
     await users.doc(hospitalId).set({'approved': approve}, SetOptions(merge: true));
+
+    if (hospitalEmail.isNotEmpty) {
+      await NotifyService.notifyHospitalDecision(
+        toEmail: hospitalEmail,
+        hospitalName: hospitalName,
+        approved: approve,
+      );
+    }
   }
 
   // ===== Doctors =====
@@ -100,8 +124,9 @@ class FS {
       String hospitalId, {
         bool? approved,
       }) {
-    Query<Map<String, dynamic>> q =
-    users.where('role', isEqualTo: 'doctor').where('hospitalId', isEqualTo: hospitalId);
+    Query<Map<String, dynamic>> q = users
+        .where('role', isEqualTo: 'doctor')
+        .where('hospitalId', isEqualTo: hospitalId);
     if (approved != null) q = q.where('approved', isEqualTo: approved);
     return q.snapshots();
   }
@@ -113,7 +138,25 @@ class FS {
     required String doctorUid,
     required bool approve,
   }) async {
-    await users.doc(doctorUid).set({'approved': approve}, SetOptions(merge: true));
+    final userRef = users.doc(doctorUid);
+    final userSnap = await userRef.get();
+    if (!userSnap.exists) return;
+
+    final data = userSnap.data()!;
+    final doctorEmail = (data['email'] ?? '').toString();
+    final doctorName = (data['name'] ?? '').toString();
+    final hospitalName = (data['hospitalName'] ?? '').toString();
+
+    await userRef.set({'approved': approve}, SetOptions(merge: true));
+
+    if (doctorEmail.isNotEmpty) {
+      await NotifyService.notifyDoctorDecision(
+        toEmail: doctorEmail,
+        doctorName: doctorName,
+        hospitalName: hospitalName,
+        approved: approve,
+      );
+    }
   }
 
   static Future<void> deleteDoctor(String doctorUid) async {
@@ -133,20 +176,89 @@ class FS {
   static Future<bool> verifyOtp(String email, String code) async {
     final doc = await otps.doc(email).get();
     if (!doc.exists) return false;
-
     final data = doc.data()!;
     final ts = data['expiresAt'];
     final expiresAt = ts is Timestamp ? ts.toDate() : DateTime.tryParse(ts.toString());
-
     final ok = data['code'] == code && (expiresAt?.isAfter(DateTime.now()) ?? false);
     if (ok) await otps.doc(email).delete();
     return ok;
   }
 
-  // ===== Reports (Hospital Admin) =====
+  // ===== Medical Reports =====
+  static Future<void> addMedicalReport(
+      String appointmentId,
+      String report,
+      String medicines,
+      ) async {
+    final apptSnap = await appointments.doc(appointmentId).get();
+    if (!apptSnap.exists) return;
+
+    final appt = apptSnap.data()!;
+    final patientId = (appt['patientId'] ?? '').toString();
+    if (patientId.isEmpty) return;
+
+    String doctorName = (appt['doctorName'] ?? appt['doctorId'] ?? '').toString();
+    String hospitalName = (appt['hospitalName'] ?? '').toString();
+    final hospitalId = (appt['hospitalId'] ?? '').toString();
+
+    if (hospitalName.isEmpty && hospitalId.isNotEmpty) {
+      try {
+        final h = await hospitals.doc(hospitalId).get();
+        if (h.exists) {
+          hospitalName = (h.data()!['name'] ?? '').toString();
+        }
+      } catch (_) {}
+    }
+
+    final nowServerTs = FieldValue.serverTimestamp();
+    final batch = _db.batch();
+
+    final apptRef = appointments.doc(appointmentId);
+    batch.update(apptRef, {
+      'report': report,
+      'medicines': medicines,
+      'status': 'completed',
+      'updatedAt': nowServerTs,
+    });
+
+    final patientApptRef = users.doc(patientId).collection('appointments').doc(appointmentId);
+    batch.set(
+      patientApptRef,
+      {
+        'report': report,
+        'medicines': medicines,
+        'status': 'completed',
+        'doctorName': doctorName,
+        'hospitalName': hospitalName,
+        'updatedAt': nowServerTs,
+      },
+      SetOptions(merge: true),
+    );
+
+    //  تعديل بسيط: حفظ التقرير في مكانين
+    final reportData = {
+      'appointmentId': appointmentId,
+      'doctorName': doctorName,
+      'hospitalName': hospitalName,
+      'hospitalId': hospitalId,
+      'diagnosis': report,
+      'notes': medicines,
+      'patientId': patientId,
+      'createdAt': nowServerTs,
+    };
+
+    final patientReportRef = users.doc(patientId).collection('reports').doc();
+    final globalReportRef = reports.doc();
+    batch.set(patientReportRef, reportData);
+    batch.set(globalReportRef, reportData);
+
+    await batch.commit();
+  }
+
+  // ===== باقي الكود =====
   static Future<Map<String, int>> statsForHospital(String hospitalId, String period) async {
     final now = DateTime.now();
-    late DateTime from;
+    DateTime from;
     switch (period) {
       case 'weekly':
         from = now.subtract(const Duration(days: 7));
@@ -154,37 +266,69 @@ class FS {
       case 'monthly':
         from = DateTime(now.year, now.month == 1 ? 12 : now.month - 1, now.day);
         break;
+      case 'yearly':
       default:
         from = DateTime(now.year - 1, now.month, now.day);
     }
 
-    int newRegs = 0, appts = 0, visits = 0;
+    final fromTs = _ts(from);
+    int newRegs = 0;
+    int appts = 0;
+    int visits = 0;
 
     try {
       final u = await users
           .where('role', isEqualTo: 'patient')
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+          .where('createdAt', isGreaterThanOrEqualTo: fromTs)
           .get();
-      newRegs = u.docs.length;
+      newRegs = u.size;
     } catch (_) {}
 
     try {
-      final a = await appointments
-          .where('hospitalId', isEqualTo: hospitalId)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
-          .get();
-      appts = a.docs.length;
-      visits = appts;
+      String? hospName;
+      try {
+        final hospDoc = await hospitals.doc(hospitalId).get();
+        hospName = (hospDoc.data()?['name'] ?? '').toString();
+      } catch (_) {}
+
+      final all = await appointments.where('createdAt', isGreaterThanOrEqualTo: fromTs).get();
+
+      for (final doc in all.docs) {
+        final data = doc.data();
+        if ((data['hospitalId'] == hospitalId) ||
+            (hospName != null && hospName.isNotEmpty && data['hospitalName'] == hospName)) {
+          appts++;
+          if (data['status'] == 'completed') visits++;
+        }
+      }
     } catch (_) {}
+
+    try {
+      final pats = await users.where('role', isEqualTo: 'patient').get();
+      for (final u in pats.docs) {
+        final subs = await u.reference
+            .collection('appointments')
+            .where('createdAt', isGreaterThanOrEqualTo: fromTs)
+            .get();
+        for (final s in subs.docs) {
+          final data = s.data();
+          if ((data['hospitalId'] == hospitalId) ||
+              (data['hospitalName'] != null && data['hospitalName'].toString().isNotEmpty)) {
+            appts++;
+            if (data['status'] == 'completed') visits++;
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (visits == 0 && appts > 0) visits = appts;
 
     return {'new': newRegs, 'appointments': appts, 'visits': visits};
   }
 
-  // ===== Reports (Head Admin) =====
   static Future<Map<String, int>> statsForHeadAdmin({required ReportPeriod period}) async {
     final now = DateTime.now();
     late DateTime from;
-
     switch (period) {
       case ReportPeriod.weekly:
         from = now.subtract(const Duration(days: 7));
@@ -205,24 +349,25 @@ class FS {
 
     final hospitalsApprovedF = _count(hospitals.where('status', isEqualTo: 'approved'));
     final hospitalsPendingF = _count(hospitals.where('status', isEqualTo: 'pending'));
-
     final doctorsApprovedF =
     _count(users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: true));
     final doctorsPendingF =
     _count(users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: false));
-
     final patientsTotalF = _count(users.where('role', isEqualTo: 'patient'));
-
     final newUsersF = _count(
-      users.where('createdAt', isGreaterThanOrEqualTo: from).where('createdAt', isLessThan: to),
+      users
+          .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
+          .where('createdAt', isLessThan: _ts(to)),
     );
-
     final newHospitalsF = _count(
-      hospitals.where('createdAt', isGreaterThanOrEqualTo: from).where('createdAt', isLessThan: to),
+      hospitals
+          .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
+          .where('createdAt', isLessThan: _ts(to)),
     );
-
     final apptsF = _count(
-      appointments.where('createdAt', isGreaterThanOrEqualTo: from).where('createdAt', isLessThan: to),
+      appointments
+          .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
+          .where('createdAt', isLessThan: _ts(to)),
     );
 
     final r = await Future.wait<int>([
@@ -248,46 +393,144 @@ class FS {
     };
   }
 
-  // ===== Doctor Features =====
-
-  /// مواعيد الدكتور لليوم
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorAppointmentsToday(String doctorId) {
-    final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day);
-    final end = start.add(const Duration(days: 1));
-
-    return appointments
-        .where('doctorId', isEqualTo: doctorId)
-        .where('time', isGreaterThanOrEqualTo: start)
-        .where('time', isLessThan: end)
-        .snapshots();
-  }
-
-  /// مواعيد الدكتور للأسبوع
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorAppointmentsWeekly(String doctorId) {
-    final today = DateTime.now();
-    final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 7));
-
-    return appointments
-        .where('doctorId', isEqualTo: doctorId)
-        .where('time', isGreaterThanOrEqualTo: startOfWeek)
-        .where('time', isLessThan: endOfWeek)
-        .snapshots();
-  }
-
-  /// إضافة تقرير طبي
-  static Future<void> addMedicalReport(String appointmentId, String report, String medicines) async {
-    await appointments.doc(appointmentId).update({
-      'report': report,
-      'medicines': medicines,
-      'status': 'completed',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// تقييمات المرضى للدكتور
+  // ===== Doctor Reviews =====
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorReviews(String doctorId) {
     return reviews.where('doctorId', isEqualTo: doctorId).snapshots();
   }
+
+  // ===== Doctor Shifts =====
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsDaily(String doctorId) {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 1));
+
+    return _db
+        .collectionGroup('shifts')
+        .where('doctorId', isEqualTo: doctorId)
+        .where('dateTs', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('dateTs', isLessThan: Timestamp.fromDate(end))
+        .orderBy('dateTs')
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsWeekly(String doctorId) {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 7));
+
+    return _db
+        .collectionGroup('shifts')
+        .where('doctorId', isEqualTo: doctorId)
+        .where('dateTs', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('dateTs', isLessThan: Timestamp.fromDate(end))
+        .orderBy('dateTs')
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsMonthly(String doctorId) {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 30));
+
+    return _db
+        .collectionGroup('shifts')
+        .where('doctorId', isEqualTo: doctorId)
+        .where('dateTs', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('dateTs', isLessThan: Timestamp.fromDate(end))
+        .orderBy('dateTs')
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> hospitalUpcomingShifts(String hospitalId) {
+    final todayStart = _ts(_dayStart(DateTime.now()));
+    return hospitals
+        .doc(hospitalId)
+        .collection('shifts')
+        .where('dateTs', isGreaterThanOrEqualTo: todayStart)
+        .orderBy('dateTs')
+        .snapshots();
+  }
+
+  // ===== Patients =====
+  static Future<Map<String, dynamic>?> getPatientProfile(String uid) async {
+    final doc = await users.doc(uid).get();
+    if (!doc.exists) return null;
+    return {'id': doc.id, ...doc.data()!};
+  }
+
+  static Future<void> updateChronic(String uid, List<String> chronic) async {
+    await users.doc(uid).set({'chronic': chronic}, SetOptions(merge: true));
+  }
+
+  static Future<String> createAppointment(String uid, Map<String, dynamic> data) async {
+    if (!data.containsKey('shiftId') ||
+        data['shiftId'] == null ||
+        data['shiftId'].toString().isEmpty) {
+      throw Exception('Missing shiftId in appointment data');
+    }
+
+    final rootRef = await appointments.add({
+      ...data,
+      'patientId': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await users.doc(uid).collection('appointments').doc(rootRef.id).set({
+      ...data,
+      'appointmentId': rootRef.id,
+      'patientId': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return rootRef.id;
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientAppointments(String uid) {
+    return users
+        .doc(uid)
+        .collection('appointments')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientReports(String uid) {
+    return users
+        .doc(uid)
+        .collection('reports')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientMedicines(String uid,
+      {bool activeOnly = false}) {
+    Query<Map<String, dynamic>> q = users.doc(uid).collection('medicines');
+    if (activeOnly) q = q.where('active', isEqualTo: true);
+    return q.orderBy('createdAt', descending: true).snapshots();
+  }
+
+  // ===== Search =====
+  static Stream<QuerySnapshot<Map<String, dynamic>>> searchHospitals(String query) {
+    return hospitals
+        .where('status', isEqualTo: 'approved')
+        .orderBy('name')
+        .startAt([query])
+        .endAt(['$query\uf8ff'])
+        .snapshots();
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> searchDoctors(String query) {
+    return users
+        .where('role', isEqualTo: 'doctor')
+        .orderBy('name')
+        .startAt([query])
+        .endAt(['$query\uf8ff'])
+        .snapshots();
+  }
+}
+
+// ====== Testing Accessors (for automated tests only) ======
+extension FSTestAccess on FS {
+  static DateTime dayStart(DateTime d) => FS._dayStart(d);
+  static DateTime weekStart(DateTime d) => FS._weekStart(d);
+  static Timestamp ts(DateTime d) => FS._ts(d);
 }

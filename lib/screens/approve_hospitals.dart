@@ -6,72 +6,164 @@ import '../services/notify_service.dart';
 class ApproveHospitalsScreen extends StatelessWidget {
   const ApproveHospitalsScreen({super.key});
 
-  Future<void> _decide(BuildContext context, String id, Map data, bool approve) async {
-    await FS.decideHospital(hospitalId: id, approve: approve);
-    final adminEmail = data['email'] as String?; // إيميل مسؤول المستشفى
-    if (adminEmail != null) {
-      await NotifyService.sendEmail(
-        to: adminEmail,
-        subject: approve ? 'Hospital Approved' : 'Hospital Rejected',
-        text: approve
-            ? 'Your hospital "${data['name']}" has been approved.'
-            : 'Your hospital "${data['name']}" has been rejected.',
-      );
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approve ? 'Approved' : 'Rejected')),
-      );
+  // ===== دالة لقبول أو رفض المستشفى =====
+  Future<void> _decide(
+      BuildContext context, String id, Map<String, dynamic> data, bool approve) async {
+    try {
+      await FS.decideHospital(hospitalId: id, approve: approve);
+
+      final adminEmail = data['email'] as String?;
+      final hospitalName = data['name'] ?? 'Unnamed Hospital';
+
+      //  إرسال إيميل لمسؤول المستشفى
+      if (adminEmail != null && adminEmail.isNotEmpty) {
+        await NotifyService.notifyHospitalDecision(
+          toEmail: adminEmail,
+          hospitalName: hospitalName,
+          approved: approve,
+        );
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              approve
+                  ? 'Hospital "$hospitalName" has been APPROVED.'
+                  : 'Hospital "$hospitalName" has been REJECTED.',
+            ),
+            backgroundColor: approve ? Colors.green : Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
+  // ===== واجهة المستخدم =====
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Accept or Reject (Hospitals)')),
+      appBar: AppBar(
+        title: const Text('Hospital Approval Requests'),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF2D515C),
+      ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FS.pendingHospitalsStream(),
         builder: (context, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
+
+          if (!snap.hasData || snap.data!.docs.isEmpty) {
+            return const Center(
+              child: Text(
+                'No pending hospital requests',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+            );
+          }
+
           final docs = snap.data!.docs;
-          if (docs.isEmpty) return const Center(child: Text('No pending hospitals'));
-          return ListView.separated(
+
+          return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemBuilder: (_, i) {
+            itemCount: docs.length,
+            itemBuilder: (context, i) {
               final d = docs[i];
               final m = d.data();
+              final name = m['name'] ?? 'Unnamed Hospital';
+              final email = m['email'] ?? 'No email available';
+
               return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                 color: const Color(0xFF2D515C),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(m['name'] ?? 'Unnamed', style: const TextStyle(color: Colors.white, fontSize: 18)),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Text(m['email'] ?? '', style: const TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 12),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           ElevatedButton(
                             onPressed: () => _decide(context, d.id, m, true),
-                            child: const Text('Accept'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Accept',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          OutlinedButton(
+                          ElevatedButton(
                             onPressed: () => _decide(context, d.id, m, false),
-                            child: const Text('Reject'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Reject',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
               );
             },
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemCount: docs.length,
           );
         },
       ),

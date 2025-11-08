@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/settings_screen.dart';
-import '../screens/doctor/my_shifts.dart';
-import '../screens/doctor/weekly_shifts.dart';
+import '../screens/doctor/my_shifts_screen.dart';
+import '../screens/doctor/weekly_shifts_screen.dart';
 import '../screens/doctor/reviews.dart';
 
 class DoctorDrawer extends StatelessWidget {
@@ -16,7 +16,7 @@ class DoctorDrawer extends StatelessWidget {
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(
-              color: Color(0xFF285C63), // نفس الأزرق في التصميم
+              color: Color(0xFF285C63),
             ),
             accountName: Text(
               doctorName,
@@ -29,16 +29,13 @@ class DoctorDrawer extends StatelessWidget {
             ),
           ),
 
-          // ✅ My profile
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text("My profile"),
             onTap: () {
-              // TODO: افتحي صفحة بروفايل الدكتور
             },
           ),
 
-          // ✅ My shifts (اليوم فقط)
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text("My shifts"),
@@ -52,7 +49,6 @@ class DoctorDrawer extends StatelessWidget {
             },
           ),
 
-          // ✅ Weekly Shifts
           ListTile(
             leading: const Icon(Icons.view_week),
             title: const Text("Weekly Shifts"),
@@ -60,22 +56,19 @@ class DoctorDrawer extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => WeeklyShiftsScreen(doctorId: doctorId),
+                  builder: (_) => ShiftsOverviewScreen(doctorId: doctorId),
                 ),
               );
             },
           ),
 
-          // ✅ Chatbot
           ListTile(
             leading: const Icon(Icons.smart_toy),
             title: const Text("Chatbot"),
             onTap: () {
-              // TODO: افتحي شاشة الشات بوت
             },
           ),
 
-          // ✅ Reviews
           ListTile(
             leading: const Icon(Icons.reviews),
             title: const Text("Reviews"),
@@ -89,7 +82,6 @@ class DoctorDrawer extends StatelessWidget {
             },
           ),
 
-          // ✅ Settings
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text("Settings"),
@@ -105,7 +97,6 @@ class DoctorDrawer extends StatelessWidget {
 
           const Spacer(),
 
-          // ✅ Logout
           Padding(
             padding: const EdgeInsets.all(10),
             child: ElevatedButton.icon(
@@ -119,7 +110,6 @@ class DoctorDrawer extends StatelessWidget {
               icon: const Icon(Icons.logout, color: Colors.white),
               label: const Text("Logout", style: TextStyle(color: Colors.white)),
               onPressed: () {
-                // TODO: logout logic
               },
             ),
           ),
