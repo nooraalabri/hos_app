@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../routes.dart';
 import '../services/otp_service.dart';
 
@@ -21,21 +22,33 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
     email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
   }
 
-  @override void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   Future<void> _verify() async {
-    setState(()=>checking=true);
+    setState(() => checking = true);
+
     final ok = await OtpService.verify(email, _c.text.trim());
-    setState(()=>checking=false);
+
+    setState(() => checking = false);
+
     if (ok) {
-      if (mounted) Navigator.pushNamed(context, AppRoutes.reset, arguments: email);
+      if (mounted) {
+        Navigator.pushNamed(context, AppRoutes.reset, arguments: email);
+      }
     } else {
-      setState(()=>err='Invalid or expired code');
+      setState(() =>
+      err = AppLocalizations.of(context)!.invalidOrExpired);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -44,22 +57,47 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text('Enter recovery code', style: Theme.of(context).textTheme.titleMedium),
+
+              // عنوان الصفحة
+              Text(
+                t.enterRecoveryCode,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+
               const SizedBox(height: 16),
+
               TextField(
                 controller: _c,
                 keyboardType: TextInputType.number,
                 maxLength: 4,
                 textAlign: TextAlign.center,
-                decoration: const InputDecoration(counterText: '', hintText: '----'),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: t.hintCode,
+                ),
               ),
+
               const SizedBox(height: 10),
-              if (err!=null) Text(err!, style: const TextStyle(color: Colors.red)),
+
+              if (err != null)
+                Text(
+                  err!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+
               const Spacer(),
-              ElevatedButton(onPressed: checking?null:_verify, child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
-                child: checking ? const CircularProgressIndicator() : const Text('Send'),
-              )),
+
+              ElevatedButton(
+                onPressed: checking ? null : _verify,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 36, vertical: 12),
+                  child: checking
+                      ? const CircularProgressIndicator()
+                      : Text(t.send),
+                ),
+              ),
+
               const SizedBox(height: 24),
             ],
           ),

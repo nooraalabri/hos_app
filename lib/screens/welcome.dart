@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../theme.dart';
 import '../routes.dart';
 import '../widgets/app_button.dart';
@@ -8,6 +9,8 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return SafeArea(
       child: Scaffold(
         body: Center(
@@ -16,13 +19,37 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.assignment_turned_in_outlined, size: 140, color: Color(0xFF9AAAB2)),
+                const Icon(
+                  Icons.assignment_turned_in_outlined,
+                  size: 140,
+                  color: Color(0xFF9AAAB2),
+                ),
+
                 const SizedBox(height: 24),
-                Text('Hospital appointment', style: Theme.of(context).textTheme.headlineMedium),
+
+                // العنوان متعدد اللغات
+                Text(
+                  t.welcomeTitle,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+
                 const SizedBox(height: 28),
-                AppButton(text: 'login', onPressed: () => Navigator.pushNamed(context, AppRoutes.login)),
+
+                // زر تسجيل الدخول
+                AppButton(
+                  text: t.login,
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
+                ),
+
                 const SizedBox(height: 16),
-                AppButton(text: 'sign up', filled: false, onPressed: () => Navigator.pushNamed(context, AppRoutes.selectRole)),
+
+                // زر إنشاء حساب
+                AppButton(
+                  text: t.signUp,
+                  filled: false,
+                  onPressed: () => Navigator.pushNamed(context, AppRoutes.selectRole),
+                ),
               ],
             ),
           ),

@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:hos_app/patients/profile_page.dart';
+import 'package:hos_app/screens/HeadAdminHospitalDetailsScreen.dart';
+import 'package:hos_app/screens/adddoctor.dart';
 
 // ========== Doctor Screens ==========
 import 'package:hos_app/screens/doctor/add_report_screen.dart';
@@ -36,10 +39,8 @@ import 'package:hos_app/screens/head_admin_reports.dart';
 import 'package:hos_app/screens/change_password.dart';
 import 'package:hos_app/screens/settings_screen.dart';
 
-
 // ========== Patient Screens ==========
 import 'package:hos_app/patients/patient_home.dart';
-import 'package:hos_app/patients/profile_page.dart';
 import 'package:hos_app/patients/search_page.dart';
 import 'package:hos_app/patients/appointment_page.dart';
 import 'package:hos_app/patients/medical_reports_page.dart';
@@ -62,6 +63,11 @@ class AppRoutes {
   static const pendingApproval = '/pending-approval';
   static const manageShifts = '/hospital/manage-shifts';
   static const hospitalAppointments = '/hospital/appointments';
+  static const addDoctorByAdmin = '/hospital/add-doctor';
+
+  // ✅ المسارات الجديدة
+  static const headAdminHospitalDetails = '/headadmin/hospital-details';
+  static const headAdminDashboard = '/headadmin/dashboard';
 
   // ========== Auth & Registration ==========
   static const welcome = '/';
@@ -114,6 +120,10 @@ class AppRoutes {
     approveDoctors: (_) => const ApproveDoctorsScreen(),
     pendingApproval: (_) => const PendingApprovalScreen(),
     manageShifts: (_) => admin.ManageShiftsScreen(),
+    addDoctorByAdmin: (_) => const AddDoctorByAdminScreen(),
+
+    // ✅ الصفحات الجديدة
+    headAdminHospitalDetails: (_) => const HeadAdminHospitalDetailsScreen(),
 
     // ---------- Auth & Registration ----------
     welcome: (_) => const WelcomeScreen(),

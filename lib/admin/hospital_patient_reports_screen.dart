@@ -3,16 +3,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
+import '../../l10n/app_localizations.dart'; // ✅ لإضافة الترجمة
 
 class HospitalPatientReportsScreen extends StatefulWidget {
   static const route = '/hospital/patient-reports';
   const HospitalPatientReportsScreen({super.key});
 
   @override
-  State<HospitalPatientReportsScreen> createState() => _HospitalPatientReportsScreenState();
+  State<HospitalPatientReportsScreen> createState() =>
+      _HospitalPatientReportsScreenState();
 }
 
-class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScreen> {
+class _HospitalPatientReportsScreenState
+    extends State<HospitalPatientReportsScreen> {
   String? hospId;
   String? _search;
 
@@ -27,8 +30,10 @@ class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScr
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!; // ✅ متغير الترجمة
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Patient Reports')),
+      appBar: AppBar(title: Text(t.patient_profile)), // ✅ "Patient Reports"
       drawer: const AdminDrawer(),
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
@@ -43,7 +48,7 @@ class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScr
             return const Center(child: CircularProgressIndicator());
           }
           if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return const Center(child: Text('No reports found'));
+            return Center(child: Text(t.no_data)); // ✅ "No reports found"
           }
 
           final items = snap.data!.docs
@@ -60,10 +65,11 @@ class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScr
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // 🔍 حقل البحث
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: 'Search by patient name',
+                    hintText: t.search_patient, // ✅ "Search by patient name"
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -71,17 +77,25 @@ class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScr
                     filled: true,
                     fillColor: Colors.grey[200],
                   ),
-                  onChanged: (v) => setState(() => _search = v.trim().isEmpty ? null : v.trim()),
+                  onChanged: (v) => setState(() =>
+                  _search = v.trim().isEmpty ? null : v.trim()),
                 ),
                 const SizedBox(height: 16),
+
+                // 📋 قائمة التقارير
                 Expanded(
                   child: ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (ctx, i) {
                       final r = items[i];
                       final date = (r['createdAt'] is Timestamp)
-                          ? (r['createdAt'] as Timestamp).toDate().toString().split(' ').first
+                          ? (r['createdAt'] as Timestamp)
+                          .toDate()
+                          .toString()
+                          .split(' ')
+                          .first
                           : '-';
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 2,
@@ -93,16 +107,21 @@ class _HospitalPatientReportsScreenState extends State<HospitalPatientReportsScr
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Patient: ${r['patientName'] ?? 'Unknown'}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                '${t.patient}: ${r['patientName'] ?? t.unknown}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                              ),
                               const SizedBox(height: 4),
-                              Text('Doctor: ${r['doctorName'] ?? '-'}'),
+                              Text('${t.doctor}: ${r['doctorName'] ?? '-'}'),
                               const SizedBox(height: 4),
-                              Text('Hospital: ${r['hospitalName'] ?? '-'}'),
+                              Text(
+                                  '${t.hospital}: ${r['hospitalName'] ?? '-'}'),
                               const SizedBox(height: 4),
-                              Text('Diagnosis: ${r['diagnosis'] ?? '-'}'),
+                              Text(
+                                  '${t.diagnosis ?? "Diagnosis"}: ${r['diagnosis'] ?? '-'}'),
                               const SizedBox(height: 4),
-                              Text('Date: $date'),
+                              Text('${t.date ?? "Date"}: $date'),
                             ],
                           ),
                         ),

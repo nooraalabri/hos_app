@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../widgets/app_logo.dart';
 import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
@@ -27,7 +29,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   bool _loading = false;
   String? _error;
 
-  // تحقق من قوة الباسورد: صغير + كبير + رقم + رمز + طول ≥ 8
   final RegExp _passRe = RegExp(
     r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$',
   );
@@ -48,20 +49,24 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     final initial = DateTime(now.year - 18, now.month, now.day);
     final first = DateTime(now.year - 100, 1, 1);
     final last = now;
+
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: first,
       lastDate: last,
     );
+
     if (picked != null) {
       _dob.text =
-      "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       setState(() {});
     }
   }
 
   Future<void> _submit() async {
+    final t = AppLocalizations.of(context)!;
+
     if (!_form.currentState!.validate()) return;
 
     setState(() {
@@ -70,7 +75,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     });
 
     try {
-      // إنشاء الحساب
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -87,7 +91,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       final uid = cred.user?.uid;
       if (uid == null) throw Exception('Registration failed: UID is null.');
 
-      // تخزين بيانات إضافية في Firestore
       await FS.createUser(uid, {
         'dob': _dob.text.trim(),
         'civilNumber': _civil.text.trim(),
@@ -96,7 +99,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
       if (!mounted) return;
 
-      // ✅ بعد التسجيل يذهب مباشرة إلى صفحة المريض الجديدة
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.patientHome,
@@ -111,6 +113,8 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -122,128 +126,124 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AppLogo(size: 90),
+
                 Text(
-                  'Register',
+                  t.register,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 14),
 
-                // الاسم
+                // === Name ===
                 AppInput(
                   controller: _name,
-                  label: 'My Name',
-                  validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Required' : null,
+                  label: t.myName,
+                  validator: (v) => (v == null || v.isEmpty) ? t.required : null,
                 ),
+
                 const SizedBox(height: 12),
 
-                // تاريخ الميلاد
+                // === DOB ===
                 GestureDetector(
                   onTap: _pickDob,
                   child: AbsorbPointer(
                     child: AppInput(
                       controller: _dob,
-                      label: 'Date of Birth',
-                      hint: 'YYYY-MM-DD',
+                      label: t.dateOfBirth,
+                      hint: t.dobHint,
                       validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Required' : null,
+                      (v == null || v.isEmpty) ? t.required : null,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
-                // رقم البطاقة المدنية (8 أرقام بالضبط)
+                // === Civil Number ===
                 AppInput(
                   controller: _civil,
-                  label: 'Civil Number',
+                  label: t.civilNumber,
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
+                    if (v == null || v.isEmpty) return t.required;
                     if (!RegExp(r'^\d{8}$').hasMatch(v)) {
-                      return 'Must be exactly 8 digits';
+                      return t.civilMustBe8;
                     }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 12),
 
-                // الإيميل
+                // === Email ===
                 AppInput(
                   controller: _email,
-                  label: 'Email',
+                  label: t.email,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v) => (v == null || !v.contains('@'))
-                      ? 'Valid email required'
-                      : null,
+                  validator: (v) =>
+                  (v == null || !v.contains('@')) ? t.validEmailRequired : null,
                 ),
+
                 const SizedBox(height: 12),
 
-                // الباسورد
+                // === Password ===
                 PasswordInput(
                   controller: _pass,
-                  label: 'Password',
+                  label: t.password,
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Password is required';
-                    }
-                    if (!_passRe.hasMatch(v)) {
-                      return 'Min 8 incl. upper, lower, number & special';
-                    }
+                    if (v == null || v.isEmpty) return t.passwordRequired;
+                    if (!_passRe.hasMatch(v)) return t.passwordRules;
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 12),
 
-                // تأكيد الباسورد
+                // === Confirm Password ===
                 PasswordInput(
                   controller: _pass2,
-                  label: 'Confirm Password',
+                  label: t.confirmPassword,
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please confirm password';
-                    }
-                    if (v != _pass.text) {
-                      return 'Passwords do not match';
-                    }
+                    if (v == null || v.isEmpty) return t.confirmPasswordRequired;
+                    if (v != _pass.text) return t.passwordsNotMatch;
                     return null;
                   },
                 ),
 
                 const SizedBox(height: 18),
+
                 if (_error != null)
-                  Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
 
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: _loading
                         ? const CircularProgressIndicator()
-                        : const Text('Sign Up'),
+                        : Text(t.signUp),
                   ),
                 ),
 
                 const SizedBox(height: 12),
+
                 Center(
                   child: Wrap(
                     alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Text('Already have an account? '),
+                      Text(t.alreadyHaveAccount),
                       InkWell(
-                        onTap: () => Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.login,
-                              (_) => false,
-                        ),
-                        child: const Text(
-                          'Log in',
-                          style: TextStyle(
+                        onTap: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            AppRoutes.login,
+                                (_) => false,
+                          );
+                        },
+                        child: Text(
+                          t.login,
+                          style: const TextStyle(
                             decoration: TextDecoration.underline,
                             fontWeight: FontWeight.w600,
                           ),
@@ -252,6 +252,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 12),
               ],
             ),

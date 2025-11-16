@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class ShiftsOverviewScreen extends StatelessWidget {
   final String doctorId;
@@ -8,40 +9,44 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFE8F2F3),
         appBar: AppBar(
           backgroundColor: const Color(0xFF2D515C),
-          title: const Text(
-            "My Shifts",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            t.myShifts,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
-          bottom: const TabBar(
+          bottom: TabBar(
             indicatorColor: Colors.white,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             tabs: [
-              Tab(text: "Daily"),
-              Tab(text: "Weekly"),
-              Tab(text: "Monthly"),
+              Tab(text: t.daily),
+              Tab(text: t.weekly),
+              Tab(text: t.monthly),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            _buildShiftList(doctorId, 'daily'),
-            _buildShiftList(doctorId, 'weekly'),
-            _buildShiftList(doctorId, 'monthly'),
+            _buildShiftList(context, doctorId, 'daily'),
+            _buildShiftList(context, doctorId, 'weekly'),
+            _buildShiftList(context, doctorId, 'monthly'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildShiftList(String doctorId, String type) {
+  Widget _buildShiftList(BuildContext context, String doctorId, String type) {
+    final t = AppLocalizations.of(context)!;
+
     late final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
     if (type == 'daily') {
       stream = FS.doctorShiftsDaily(doctorId);
@@ -61,17 +66,15 @@ class ShiftsOverviewScreen extends StatelessWidget {
         }
 
         if (snapshot.hasError) {
-          return Center(
-              child: Text("Error: ${snapshot.error}",
-                  style: const TextStyle(color: Colors.red)));
+          return Center(child: Text("${t.error} ${snapshot.error}"));
         }
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-              "No shifts found",
-              style: TextStyle(color: Colors.black54, fontSize: 16),
+              t.noShifts,
+              style: const TextStyle(color: Colors.black54, fontSize: 16),
             ),
           );
         }
@@ -106,7 +109,7 @@ class ShiftsOverviewScreen extends StatelessWidget {
           itemCount: shifts.length,
           itemBuilder: (context, i) {
             final s = shifts[i];
-            final shiftId = s['id']; // 🟢 لازم كل appointment فيها shiftId
+            final shiftId = s['id'];
             final date = s['date'];
             final day = s['day'];
             final start = s['startTime'];
@@ -131,7 +134,7 @@ class ShiftsOverviewScreen extends StatelessWidget {
                   ),
                 ),
                 subtitle: Text(
-                  "Time: $start - $end",
+                  "${t.timeLabel}: $start - $end",
                   style: const TextStyle(color: Colors.white70),
                 ),
                 children: [
@@ -140,7 +143,6 @@ class ShiftsOverviewScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     width: double.infinity,
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      // ✅ تم التعديل هنا: نحصر البحث في المجموعة الرئيسية فقط
                       stream: FirebaseFirestore.instance
                           .collection('appointments')
                           .where('doctorId', isEqualTo: doctorId)
@@ -158,18 +160,20 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
                         final appts = snap.data?.docs ?? [];
                         if (appts.isEmpty) {
-                          return const Text(
-                            "No appointments in this shift",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          return Center(
+                            child: Text(
+                              t.noAppointmentsInShift,
+                              style: const TextStyle(color: Colors.grey, fontSize: 15),
+                              textAlign: TextAlign.center,
+                            ),
                           );
                         }
 
                         return Column(
                           children: appts.map((a) {
                             final m = a.data();
-                            final name = m['patientName'] ?? 'Unknown';
-                            final status = m['status'] ?? 'pending';
+                            final name = m['patientName'] ?? '—';
+                            final status = m['status'] ?? '—';
                             final rawTime = m['time'];
                             String time = '';
 
@@ -193,11 +197,12 @@ class ShiftsOverviewScreen extends StatelessWidget {
                                 title: Text(
                                   name,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D515C)),
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2D515C),
+                                  ),
                                 ),
                                 subtitle: Text(
-                                  "Time: $time\nStatus: $status",
+                                  "${t.timeLabel}: $time\n${t.statusLabel}: $status",
                                   style: const TextStyle(color: Colors.black87),
                                 ),
                                 isThreeLine: true,

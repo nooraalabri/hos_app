@@ -3,16 +3,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
+import '../../l10n/app_localizations.dart'; // ✅ استيراد الترجمة
 
 class HospitalDoctorReportsScreen extends StatefulWidget {
   static const route = '/hospital/doctor-reports';
   const HospitalDoctorReportsScreen({super.key});
 
   @override
-  State<HospitalDoctorReportsScreen> createState() => _HospitalDoctorReportsScreenState();
+  State<HospitalDoctorReportsScreen> createState() =>
+      _HospitalDoctorReportsScreenState();
 }
 
-class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScreen> {
+class _HospitalDoctorReportsScreenState
+    extends State<HospitalDoctorReportsScreen> {
   String? hospId;
   String? _search;
 
@@ -27,8 +30,10 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!; // ✅ المتغير المختصر للترجمة
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Doctor Reports')),
+      appBar: AppBar(title: Text(t.doctor_profile)), // ✅ Doctor Reports → ملف الطبيب
       drawer: const AdminDrawer(),
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
@@ -43,7 +48,7 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
             return const Center(child: CircularProgressIndicator());
           }
           if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return const Center(child: Text('No doctors found'));
+            return Center(child: Text(t.no_data)); // ✅ No doctors found → لا توجد بيانات
           }
 
           final doctors = snap.data!.docs
@@ -60,10 +65,11 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // 🔍 Search
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: 'Search by doctor name',
+                    hintText: t.search_doctor, // ✅ "Search by doctor name"
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -71,23 +77,25 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
                     filled: true,
                     fillColor: Colors.grey[200],
                   ),
-                  onChanged: (v) =>
-                      setState(() => _search = v.trim().isEmpty ? null : v.trim()),
+                  onChanged: (v) => setState(
+                          () => _search = v.trim().isEmpty ? null : v.trim()),
                 ),
                 const SizedBox(height: 16),
 
-                // ===== List of Doctors =====
+                // 🩺 List of Doctors
                 Expanded(
                   child: ListView.builder(
                     itemCount: doctors.length,
                     itemBuilder: (ctx, i) {
                       final d = doctors[i];
-                      final name = d['name'] ?? 'Unknown';
+                      final name = d['name'] ?? t.unknown;
                       final email = d['email'] ?? '';
-                      final specialization = d['specialization'] ?? '—';
+                      final specialization =
+                          d['specialization'] ?? '—';
                       final doctorId = d['id'];
 
-                      return FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      return FutureBuilder<
+                          QuerySnapshot<Map<String, dynamic>>>(
                         future: FirebaseFirestore.instance
                             .collection('appointments')
                             .where('doctorId', isEqualTo: doctorId)
@@ -108,23 +116,24 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
                             child: Padding(
                               padding: const EdgeInsets.all(14),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
-                                  Text('$name',
+                                  Text(name,
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 16)),
                                   const SizedBox(height: 4),
-                                  Text('$email'),
+                                  Text(email),
                                   const SizedBox(height: 4),
-                                  Text('Specialty: $specialization'),
+                                  Text('${t.specialization}: $specialization'),
                                   const SizedBox(height: 8),
                                   Row(
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                     children: [
-                                      _statBox('Appointments', total),
-                                      _statBox('Completed', completed),
+                                      _statBox(t.appointments, total),
+                                      _statBox(t.completed ?? "Completed", completed),
                                     ],
                                   ),
                                 ],
@@ -159,7 +168,9 @@ class _HospitalDoctorReportsScreenState extends State<HospitalDoctorReportsScree
           const SizedBox(height: 4),
           Text(value.toString(),
               style: const TextStyle(
-                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );

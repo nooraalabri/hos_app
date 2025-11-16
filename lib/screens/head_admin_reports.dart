@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../services/firestore_service.dart';
 
 class HeadAdminReportsScreen extends StatefulWidget {
@@ -13,8 +14,10 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(title: Text(t.reports)),
       body: FutureBuilder<Map<String, int>>(
         future: FS.statsForHeadAdmin(period: period),
         builder: (context, snap) {
@@ -28,27 +31,42 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
             child: Column(
               children: [
                 GridView.count(
-                  physics: const NeverScrollableScrollPhysics(), // 👈 يمنع التمرير الداخلي
-                  shrinkWrap: true, // 👈 يخلي Grid يأخذ حجمه فقط
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   children: [
-                    _statCard('Hospitals (approved)', m['hospitalsApproved'] ?? 0,
+                    _statCard(t.hospitalsApproved,
+                        m['hospitalsApproved'] ?? 0,
                         Icons.local_hospital, Colors.green),
-                    _statCard('Hospitals (pending)', m['hospitalsPending'] ?? 0,
+
+                    _statCard(t.hospitalsPending,
+                        m['hospitalsPending'] ?? 0,
                         Icons.pending, Colors.orange),
-                    _statCard('Doctors (approved)', m['doctorsApproved'] ?? 0,
+
+                    _statCard(t.doctorsApproved,
+                        m['doctorsApproved'] ?? 0,
                         Icons.medical_information, Colors.blue),
-                    _statCard('Doctors (pending)', m['doctorsPending'] ?? 0,
+
+                    _statCard(t.doctorsPending,
+                        m['doctorsPending'] ?? 0,
                         Icons.pending_actions, Colors.red),
-                    _statCard('Patients (total)', m['patientsTotal'] ?? 0,
+
+                    _statCard(t.patientsTotal,
+                        m['patientsTotal'] ?? 0,
                         Icons.people, Colors.purple),
-                    _statCard('New users', m['newUsers'] ?? 0,
+
+                    _statCard(t.newUsers,
+                        m['newUsers'] ?? 0,
                         Icons.person_add, Colors.teal),
-                    _statCard('New hospitals', m['newHospitals'] ?? 0,
+
+                    _statCard(t.newHospitals,
+                        m['newHospitals'] ?? 0,
                         Icons.apartment, Colors.brown),
-                    _statCard('Appointments', m['appointments'] ?? 0,
+
+                    _statCard(t.appointments,
+                        m['appointments'] ?? 0,
                         Icons.event_available, Colors.indigo),
                   ],
                 ),
@@ -56,14 +74,24 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
                 const SizedBox(height: 20),
 
                 SegmentedButton<ReportPeriod>(
-                  segments: const [
-                    ButtonSegment(value: ReportPeriod.weekly, label: Text('Weekly')),
-                    ButtonSegment(value: ReportPeriod.monthly, label: Text('Monthly')),
-                    ButtonSegment(value: ReportPeriod.yearly, label: Text('Yearly')),
+                  segments: [
+                    ButtonSegment(
+                      value: ReportPeriod.weekly,
+                      label: Text(t.weekly),
+                    ),
+                    ButtonSegment(
+                      value: ReportPeriod.monthly,
+                      label: Text(t.monthly),
+                    ),
+                    ButtonSegment(
+                      value: ReportPeriod.yearly,
+                      label: Text(t.yearly),
+                    ),
                   ],
                   selected: {period},
                   onSelectionChanged: (s) => setState(() => period = s.first),
                 ),
+
                 const SizedBox(height: 16),
               ],
             ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'patient_drawer.dart';
 import 'ui.dart';
+import '../l10n/app_localizations.dart';
 
 class SearchPage extends StatefulWidget {
   static const route = '/patient/search';
@@ -40,8 +41,10 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return AppScaffold(
-      title: 'Search & Book',
+      title: t.searchAndBook,
       drawer: const PatientDrawer(),
       body: Column(
         children: [
@@ -50,7 +53,7 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
               controller: q,
-              decoration: input('Search by hospital, specialization, doctor, or location...'),
+              decoration: input(t.searchHint),
               onChanged: (_) => setState(() {}),
             ),
           ),
@@ -59,10 +62,10 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
             controller: tabs,
             labelColor: AppColors.dark,
             indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(text: 'Hospital'),
-              Tab(text: 'Specialisation'),
-              Tab(text: 'Doctor'),
+            tabs: [
+              Tab(text: t.hospitalTab),
+              Tab(text: t.specialisationTab),
+              Tab(text: t.doctorTab),
             ],
           ),
           Expanded(
@@ -94,6 +97,8 @@ class _HospitalsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final col = FirebaseFirestore.instance
         .collection('hospitals')
         .where('status', isEqualTo: 'approved')
@@ -115,9 +120,9 @@ class _HospitalsList extends StatelessWidget {
 
         return _CardTile(
           title: name,
-          subtitle: 'Location: ${address.isEmpty ? 'Not specified' : address}',
+          subtitle: '${t.location}: ${address.isEmpty ? t.notSpecified : address}',
           icon: Icons.local_hospital,
-          actionText: 'View Doctors',
+          actionText: t.viewDoctors,
           onAction: () => onViewDoctors(name, id),
         );
       },
@@ -133,6 +138,8 @@ class _SpecialisationsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final col = FirebaseFirestore.instance
         .collection('users')
         .where('role', isEqualTo: 'doctor')
@@ -148,7 +155,7 @@ class _SpecialisationsList extends StatelessWidget {
           if (s.toLowerCase().contains(query.toLowerCase())) specs.add(s);
         }
         final list = specs.toList()..sort();
-        if (list.isEmpty) return const Center(child: Text('No results'));
+        if (list.isEmpty) return Center(child: Text(t.noResults));
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: list.length,
@@ -157,9 +164,9 @@ class _SpecialisationsList extends StatelessWidget {
             final s = list[i];
             return _CardTile(
               title: s,
-              subtitle: 'Tap to see doctors in this field',
+              subtitle: t.tapSeeDoctors,
               icon: Icons.medical_information,
-              actionText: 'See Doctors',
+              actionText: t.seeDoctors,
               onAction: () => onViewDoctors(s),
             );
           },
@@ -188,6 +195,8 @@ class _DoctorsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final col = FirebaseFirestore.instance
         .collection('users')
         .where('role', isEqualTo: 'doctor')
@@ -221,10 +230,10 @@ class _DoctorsList extends StatelessWidget {
           return Center(
             child: Text(
               hospitalFilterName != null
-                  ? 'No doctors found for "$hospitalFilterName"'
+                  ? t.noDoctorsForHospital(hospitalFilterName!)
                   : specFilter != null
-                  ? 'No doctors found for "$specFilter"'
-                  : 'No results found',
+                  ? t.noDoctorsForSpec(specFilter!)
+                  : t.noResults,
               style: const TextStyle(color: Colors.grey),
             ),
           );
@@ -247,14 +256,14 @@ class _DoctorsList extends StatelessWidget {
               builder: (context, snapshot) {
                 final hosName = snapshot.data?['name'] ?? 'Loading...';
                 final hosAddress = snapshot.data?['address'] ?? '';
-                final location = address.isNotEmpty ? address : (hosAddress.isNotEmpty ? hosAddress : 'Not specified');
+                final location = address.isNotEmpty ? address : (hosAddress.isNotEmpty ? hosAddress : t.notSpecified);
 
                 return _CardTile(
                   title: name,
                   subtitle:
-                  'Hospital: $hosName\nSpecialisation: ${spec.isEmpty ? "Not specified" : spec}\nLocation: $location',
+                  '${t.hospital}: $hosName\n${t.specialisation}: ${spec.isEmpty ? t.notSpecified : spec}\n${t.location}: $location',
                   icon: Icons.person,
-                  actionText: 'View Shifts',
+                  actionText: t.viewShifts,
                   onAction: () => _showShifts(ctx, doctorId, name, hosName),
                 );
               },
@@ -289,6 +298,7 @@ class _DoctorShiftList extends StatelessWidget {
   final String doctorId;
   final String doctorName;
   final String hospitalName;
+
   const _DoctorShiftList({
     required this.doctorId,
     required this.doctorName,
@@ -297,6 +307,8 @@ class _DoctorShiftList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final now = DateTime.now();
     final todayStart = Timestamp.fromDate(DateTime(now.year, now.month, now.day));
     final endDate = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 30));
@@ -310,7 +322,6 @@ class _DoctorShiftList extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      color: Colors.white,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: col.snapshots(),
         builder: (ctx, snap) {
@@ -320,9 +331,7 @@ class _DoctorShiftList extends StatelessWidget {
 
           final docs = snap.data!.docs;
           if (docs.isEmpty) {
-            return const Center(
-              child: Text('No available shifts', style: TextStyle(color: Colors.black87)),
-            );
+            return Center(child: Text(t.noShifts));
           }
 
           return ListView(
@@ -336,15 +345,13 @@ class _DoctorShiftList extends StatelessWidget {
                 future: FirebaseFirestore.instance
                     .collection('appointments')
                     .where('doctorId', isEqualTo: doctorId)
-                    .where('time', isGreaterThanOrEqualTo:
-                Timestamp.fromDate(DateTime(date.year, date.month, date.day)))
-                    .where('time', isLessThan:
-                Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1)))
+                    .where('time',
+                    isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(date.year, date.month, date.day)))
+                    .where('time',
+                    isLessThan: Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1)))
                     .get(),
                 builder: (ctx, bookedSnap) {
-                  if (!bookedSnap.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  if (!bookedSnap.hasData) return const SizedBox.shrink();
 
                   final bookedTimes = bookedSnap.data!.docs.map((doc) {
                     final ts = doc['time'] as Timestamp;
@@ -353,62 +360,25 @@ class _DoctorShiftList extends StatelessWidget {
                   }).toSet();
 
                   var availableSlots = _generateHourlySlots(start, end)
-                      .where((slot) => !bookedTimes.contains(slot))
+                      .where((slot) {
+                    final parts = slot.split(':').map(int.parse).toList();
+                    final slotTime =
+                    DateTime(date.year, date.month, date.day, parts[0], parts[1]);
+                    return slotTime.isAfter(DateTime.now()) &&
+                        !bookedTimes.contains(slot);
+                  })
                       .toList();
 
-                  //  إخفاء الأوقات المنتهية لليوم الحالي
-                  final now = DateTime.now();
-                  if (date.year == now.year && date.month == now.month && date.day == now.day) {
-                    availableSlots = availableSlots.where((slot) {
-                      final parts = slot.split(':').map(int.parse).toList();
-                      final slotTime = DateTime(now.year, now.month, now.day, parts[0], parts[1]);
-                      return slotTime.isAfter(now);
-                    }).toList();
-                  }
-
                   return ExpansionTile(
-                    collapsedTextColor: Colors.black,
-                    iconColor: Colors.teal.shade700,
-                    textColor: Colors.teal.shade900,
-                    title: Text(
-                      'Date: ${_fmtDate(date)}',
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '${availableSlots.length} slots available',
-                      style: const TextStyle(color: Colors.black54),
-                    ),
-                    children: availableSlots.isEmpty
-                        ? [
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('No available times left for today'),
-                      ),
-                    ]
-                        : availableSlots.map((slot) {
-                      return Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          title: Text(
-                            'Time: $slot',
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
-                          ),
-                          trailing: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal.shade900,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () =>
-                                _confirmBook(ctx, slot, doctorId, doctorName, hospitalName, date, d.id),
-                            child: const Text('Book'),
-                          ),
+                    title: Text('Date: ${_fmtDate(date)}'),
+                    subtitle: Text(t.slotsAvailable(availableSlots.length.toString())),
+                    children: availableSlots.map((slot) {
+                      return ListTile(
+                        title: Text('${t.time}: $slot'),
+                        trailing: ElevatedButton(
+                          onPressed: () =>
+                              _confirmBook(ctx, slot, doctorId, doctorName, hospitalName, date, d.id),
+                          child: Text(t.confirm),
                         ),
                       );
                     }).toList(),
@@ -423,34 +393,44 @@ class _DoctorShiftList extends StatelessWidget {
   }
 
   static List<String> _generateHourlySlots(String start, String end) {
-    try {
-      final sParts = start.split(':').map(int.parse).toList();
-      final eParts = end.split(':').map(int.parse).toList();
-      final sTime = DateTime(2024, 1, 1, sParts[0], sParts[1]);
-      final eTime = DateTime(2024, 1, 1, eParts[0], eParts[1]);
-      final diff = eTime.difference(sTime).inHours;
-      return List.generate(diff, (i) {
-        final t = sTime.add(Duration(hours: i));
-        return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-      });
-    } catch (_) {
-      return [];
-    }
+    final sParts = start.split(':').map(int.parse).toList();
+    final eParts = end.split(':').map(int.parse).toList();
+    final sTime = DateTime(2024, 1, 1, sParts[0], sParts[1]);
+    final eTime = DateTime(2024, 1, 1, eParts[0], eParts[1]);
+    final diff = eTime.difference(sTime).inHours;
+
+    return List.generate(diff, (i) {
+      final t = sTime.add(Duration(hours: i));
+      return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    });
   }
 
   static String _fmtDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  Future<void> _confirmBook(BuildContext ctx, String slot, String doctorId,
-      String doctorName, String hospitalName, DateTime date, String shiftId) async {
+  Future<void> _confirmBook(
+      BuildContext ctx,
+      String slot,
+      String doctorId,
+      String doctorName,
+      String hospitalName,
+      DateTime date,
+      String shiftId,
+      ) async {
+    final t = AppLocalizations.of(ctx)!;
+
     final confirm = await showDialog<bool>(
       context: ctx,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Booking'),
-        content: Text('Book $doctorName on ${_fmtDate(date)} at $slot?'),
+        title: Text(t.confirmBooking),
+        content: Text(t.confirmBookingQuestion(
+          doctorName,
+          _fmtDate(date),
+          slot,
+        )),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.confirm)),
         ],
       ),
     );
@@ -460,18 +440,27 @@ class _DoctorShiftList extends StatelessWidget {
     }
   }
 
-  Future<void> _book(BuildContext ctx, String slot, String doctorId,
-      String doctorName, String hospitalName, DateTime date, String shiftId) async {
+  Future<void> _book(
+      BuildContext ctx,
+      String slot,
+      String doctorId,
+      String doctorName,
+      String hospitalName,
+      DateTime date,
+      String shiftId,
+      ) async {
+    final t = AppLocalizations.of(ctx)!;
+
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       final fs = FirebaseFirestore.instance;
       final patientDoc = await fs.collection('users').doc(uid).get();
       final patientName = patientDoc.data()?['name'] ?? 'Unknown';
       final slotParts = slot.split(':').map(int.parse).toList();
-      final dt = DateTime(date.year, date.month, date.day, slotParts[0], slotParts[1]);
+      final dt =
+      DateTime(date.year, date.month, date.day, slotParts[0], slotParts[1]);
       final ts = Timestamp.fromDate(dt);
 
-      //  تحقق أن المريض ما عنده موعد مع نفس الدكتور في نفس اليوم
       final startOfDay = Timestamp.fromDate(DateTime(date.year, date.month, date.day));
       final endOfDay = Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1));
       final sameDayExisting = await fs
@@ -484,25 +473,24 @@ class _DoctorShiftList extends StatelessWidget {
 
       if (sameDayExisting.docs.isNotEmpty) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('You already have an appointment with $doctorName today.')),
+          SnackBar(content: Text(t.alreadyBookedToday(doctorName))),
         );
         return;
       }
 
-      //  تحقق أن الوقت نفسه ما انحجز مسبقًا
       final existing = await fs
           .collection('appointments')
           .where('doctorId', isEqualTo: doctorId)
           .where('time', isEqualTo: ts)
           .get();
+
       if (existing.docs.isNotEmpty) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('This time is already booked. Please choose another slot.')),
+          SnackBar(content: Text(t.slotBooked)),
         );
         return;
       }
 
-      //  حفظ البيانات
       final apptData = {
         'patientId': uid,
         'patientName': patientName,
@@ -516,17 +504,22 @@ class _DoctorShiftList extends StatelessWidget {
       };
 
       final rootRef = await fs.collection('appointments').add(apptData);
-      await fs.collection('users').doc(uid).collection('appointments').doc(rootRef.id).set(apptData);
+      await fs
+          .collection('users')
+          .doc(uid)
+          .collection('appointments')
+          .doc(rootRef.id)
+          .set(apptData);
 
       if (ctx.mounted) {
         Navigator.pop(ctx);
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('Appointment booked for $slot with $doctorName')),
+          SnackBar(content: Text(t.appointmentBooked(slot, doctorName))),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(ctx).showSnackBar(
-        SnackBar(content: Text('Error booking: $e')),
+        SnackBar(content: Text(t.errorBooking(e.toString()))),
       );
     }
   }
@@ -540,12 +533,14 @@ class _SnapList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (ctx, snap) {
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
         final docs = snap.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text('No results'));
+        if (docs.isEmpty) return Center(child: Text(t.noResults));
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
@@ -572,6 +567,7 @@ class _CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = Colors.teal.shade50;
+
     return PrimaryCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

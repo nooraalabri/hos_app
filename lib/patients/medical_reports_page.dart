@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'patient_drawer.dart';
 import 'ui.dart';
 
@@ -45,6 +46,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     final col = FirebaseFirestore.instance
@@ -53,53 +55,50 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
         .orderBy('createdAt', descending: true);
 
     return AppScaffold(
-      title: 'Medical reports',
+      title: t.medicalReports, // "Medical reports"
       drawer: const PatientDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ====== الفلترة ======
+            // ===== Filters =====
             PrimaryCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Medical reports',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  Text(
+                    t.medicalReports,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 600;
                       return isWide
-                          ? Row(
-                        children: _buildFilters(),
-                      )
-                          : Column(
-                        children: _buildFilters(),
-                      );
+                          ? Row(children: _buildFilters(t))
+                          : Column(children: _buildFilters(t));
                     },
                   ),
                   const SizedBox(height: 12),
-                  PrimaryButton(text: 'Send', onPressed: () => setState(() {})),
+                  PrimaryButton(text: t.send, onPressed: () => setState(() {})),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // ====== عرض التقارير ======
+            // ===== Reports list =====
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: col.snapshots(),
                 builder: (ctx, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Center(
-                        child:
-                        CircularProgressIndicator(color: Color(0xFF2D515C)));
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF2D515C)));
                   }
                   if (!snap.hasData || snap.data!.docs.isEmpty) {
-                    return const Center(child: Text('No reports'));
+                    return Center(child: Text(t.noReports));
                   }
 
                   final items = snap.data!.docs.map((e) => e.data()).where((r) {
@@ -121,7 +120,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                   }).toList();
 
                   if (items.isEmpty) {
-                    return const Center(child: Text('No reports'));
+                    return Center(child: Text(t.noReports));
                   }
 
                   return ListView.builder(
@@ -152,7 +151,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                           if (!matchesHospital) return const SizedBox();
 
                           return Container(
-                            width: double.infinity, // ✅ يجعل العرض أوتو بعرض الجهاز
+                            width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2D515C),
@@ -170,7 +169,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Hospital: $hospitalName',
+                                  '${t.hospital}: $hospitalName',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -179,15 +178,16 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Doctor: $doctorName',
+                                  '${t.doctor}: $doctorName',
                                   style: const TextStyle(
                                       color: Colors.white70, fontSize: 15),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Report:',
+                                  '${t.report}:',
                                   style: const TextStyle(
-                                      color: Colors.white, fontWeight: FontWeight.w600),
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600),
                                 ),
                                 Text(
                                   r['report'] ?? '-',
@@ -198,7 +198,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Date: ${(r['createdAt'] is Timestamp) ? (r['createdAt'] as Timestamp).toDate().toString().split(" ").first : "-"}',
+                                  '${t.date}: ${(r['createdAt'] is Timestamp) ? (r['createdAt'] as Timestamp).toDate().toString().split(" ").first : "-"}',
                                   style: const TextStyle(
                                       color: Colors.white60, fontSize: 13),
                                 ),
@@ -218,7 +218,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
     );
   }
 
-  List<Widget> _buildFilters() {
+  List<Widget> _buildFilters(AppLocalizations t) {
     return [
       Expanded(
         child: InkWell(
@@ -238,7 +238,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
-              _day == null ? 'Appointment day' : _day!.toString().split(' ').first,
+              _day == null ? t.appointmentDay : _day!.toString().split(' ').first,
             ),
           ),
         ),
@@ -246,7 +246,7 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
       const SizedBox(width: 12),
       Expanded(
         child: TextField(
-          decoration: input('Hospital name'),
+          decoration: input(t.hospitalName),
           onChanged: (v) =>
               setState(() => _hospital = v.trim().isEmpty ? null : v.trim()),
         ),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../services/firestore_service.dart';
 import '../widgets/admin_drawer.dart';
 
@@ -27,6 +28,8 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
   }
 
   Future<void> _editHospital() async {
+    final t = AppLocalizations.of(context)!;
+
     if (_hospital == null) return;
 
     final nameCtrl = TextEditingController(text: _hospital?['name'] ?? '');
@@ -37,19 +40,29 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Edit Hospital"),
+        title: Text(t.editHospital),
         content: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Name")),
-              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: "Email")),
-              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: "Address")),
-              TextField(controller: aboutCtrl, decoration: const InputDecoration(labelText: "About")),
+              TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(labelText: t.name)),
+              TextField(
+                  controller: emailCtrl,
+                  decoration: InputDecoration(labelText: t.email)),
+              TextField(
+                  controller: addressCtrl,
+                  decoration: InputDecoration(labelText: t.address)),
+              TextField(
+                  controller: aboutCtrl,
+                  decoration: InputDecoration(labelText: t.about)),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(t.cancel)),
           ElevatedButton(
             onPressed: () async {
               await FS.hospitals.doc(_hospital!['id']).set({
@@ -61,9 +74,9 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
               }, SetOptions(merge: true));
 
               Navigator.pop(context);
-              _load(); // تحديث البيانات بعد التعديل
+              _load();
             },
-            child: const Text("Save"),
+            child: Text(t.save),
           ),
         ],
       ),
@@ -72,9 +85,11 @@ class _HospitalProfileScreenState extends State<HospitalProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: Text(t.myProfile),
         actions: [
           IconButton(
             onPressed: _editHospital,
@@ -96,6 +111,8 @@ class _ProfileBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -112,7 +129,7 @@ class _ProfileBody extends StatelessWidget {
                     child: Icon(Icons.local_hospital, color: Colors.white),
                   ),
                   title: Text(
-                    data['name'] ?? 'Hospital',
+                    data['name'] ?? t.hospital,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
@@ -122,14 +139,14 @@ class _ProfileBody extends StatelessWidget {
                   subtitle: Text(data['email'] ?? ''),
                 ),
                 const SizedBox(height: 12),
-                _kv('Address', data['address'] ?? '—'),
-                _kv('About', data['about'] ?? '—'),
+                _kv(t.address, data['address'] ?? '—'),
+                _kv(t.about, data['about'] ?? '—'),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => _showDetails(context, data),
-                    child: const Text('details'),
+                    child: Text(t.details),
                   ),
                 ),
               ],
@@ -152,6 +169,8 @@ class _ProfileBody extends StatelessWidget {
   );
 
   void _showDetails(BuildContext context, Map<String, dynamic> d) {
+    final t = AppLocalizations.of(context)!;
+
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -160,12 +179,15 @@ class _ProfileBody extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            const Text('Hospital details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(
+              t.hospitalDetails,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 12),
-            _kv('Name', d['name'] ?? ''),
-            _kv('Email', d['email'] ?? ''),
-            _kv('Address', d['address'] ?? '—'),
-            _kv('About', d['about'] ?? '—'),
+            _kv(t.name, d['name'] ?? ''),
+            _kv(t.email, d['email'] ?? ''),
+            _kv(t.address, d['address'] ?? '—'),
+            _kv(t.about, d['about'] ?? '—'),
           ],
         ),
       ),

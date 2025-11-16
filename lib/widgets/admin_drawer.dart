@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../pages/hospital_admin_home.dart';
 import '../routes.dart';
 import '../services/auth_service.dart';
@@ -10,6 +11,8 @@ class AdminDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!; // الترجمات
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -20,58 +23,58 @@ class AdminDrawer extends StatelessWidget {
                 backgroundColor: Color(0xFF2D515C),
               ),
               title: Text(
-                hospitalName ?? 'Hospital',
+                hospitalName ?? t.hospital,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text('Hospital Admin'),
+              subtitle: Text(t.hospitalAdmin),
             ),
             const Divider(),
 
             _item(
               context,
               icon: Icons.home_outlined,
-              text: 'Home',
+              text: t.home,
               route: AppRoutes.hospitalAdminHome,
             ),
 
             _item(
               context,
               icon: Icons.account_circle_outlined,
-              text: 'My Profile',
+              text: t.myProfile,
               route: AppRoutes.hospitalProfile,
             ),
 
             _item(
               context,
               icon: Icons.group_outlined,
-              text: 'My Staff',
+              text: t.myStaff,
               route: AppRoutes.myStaff,
             ),
 
             _item(
               context,
               icon: Icons.schedule_outlined,
-              text: 'Manage Shifts',
+              text: t.manageShifts,
               route: AppRoutes.manageShifts,
             ),
 
             _item(
               context,
               icon: Icons.bar_chart_outlined,
-              text: 'Reports',
+              text: t.reports,
               route: AppRoutes.hospitalReports,
             ),
 
             _item(
               context,
               icon: Icons.fact_check_outlined,
-              text: 'Accept / Reject',
+              text: t.acceptReject,
               route: AppRoutes.approveDoctors,
             ),
 
             ListTile(
               leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
+              title: Text(t.settings),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(context);
@@ -89,9 +92,9 @@ class AdminDrawer extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () => AuthService.logoutAndGoWelcome(context),
                 icon: const Icon(Icons.logout, color: Color(0xFF2D515C)),
-                label: const Text(
-                  'Logout',
-                  style: TextStyle(color: Color(0xFF2D515C)),
+                label: Text(
+                  t.logout,
+                  style: const TextStyle(color: Color(0xFF2D515C)),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE6EBEC),

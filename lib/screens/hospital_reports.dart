@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../l10n/app_localizations.dart';
 import '../admin/hospital_doctor_reports_screen.dart';
 import '../admin/hospital_patient_reports_screen.dart';
 import '../services/firestore_service.dart';
@@ -24,19 +25,24 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    FS.hospitalForAdmin(uid).then((d) => setState(() => hospId = d?['id']));
+
+    FS.hospitalForAdmin(uid).then((d) {
+      setState(() => hospId = d?['id']);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final periodKey = switch (p) {
-      Period.weekly => 'weekly',
-      Period.monthly => 'monthly',
-      Period.yearly => 'yearly',
+      Period.weekly => "weekly",
+      Period.monthly => "monthly",
+      Period.yearly => "yearly",
     };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Hospital Reports')),
+      appBar: AppBar(title: Text(t.hospitalReports)),
       drawer: const AdminDrawer(),
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
@@ -52,6 +58,7 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
             'appointments': 0,
             'visits': 0
           };
+
           final total = (m['new'] ?? 0) +
               (m['appointments'] ?? 0) +
               (m['visits'] ?? 0);
@@ -67,19 +74,24 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // === Search + Period Selector ===
+                // Search + Period Selector
                 Row(
                   children: [
-                    Expanded(child: _SearchBox(onChanged: (s) {})),
+                    Expanded(
+                        child: _SearchBox(
+                            onChanged: (s) {}, hint: t.search)),
                     const SizedBox(width: 12),
                     SegmentedButton<Period>(
-                      segments: const [
+                      segments: [
                         ButtonSegment(
-                            value: Period.weekly, label: Text("Weekly")),
+                            value: Period.weekly,
+                            label: Text(t.weekly)),
                         ButtonSegment(
-                            value: Period.monthly, label: Text("Monthly")),
+                            value: Period.monthly,
+                            label: Text(t.monthly)),
                         ButtonSegment(
-                            value: Period.yearly, label: Text("Yearly")),
+                            value: Period.yearly,
+                            label: Text(t.yearly)),
                       ],
                       selected: {p},
                       onSelectionChanged: (s) =>
@@ -87,9 +99,10 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 20),
 
-                // === Pie Chart Card ===
+                // Pie Chart
                 Card(
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
@@ -98,17 +111,18 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        const Text(
-                          "Hospital Overview",
-                          style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
+                        Text(
+                          t.hospitalOverview,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 10),
+
                         SizedBox(
                           height: 220,
                           child: total == 0
-                              ? const Center(
-                              child: Text('No data available'))
+                              ? Center(child: Text(t.noData))
                               : PieChart(
                             PieChartData(
                               sectionsSpace: 2,
@@ -117,18 +131,20 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 12),
+
                         _legend(
                             color: Colors.purple,
-                            text: 'New register',
+                            text: t.newRegister,
                             value: m['new'] ?? 0),
                         _legend(
                             color: Colors.teal,
-                            text: 'Appointments',
+                            text: t.appointments,
                             value: m['appointments'] ?? 0),
                         _legend(
                             color: Colors.blueGrey,
-                            text: 'Visits',
+                            text: t.visits,
                             value: m['visits'] ?? 0),
                       ],
                     ),
@@ -137,26 +153,27 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 
                 const SizedBox(height: 20),
 
-                // === Buttons ===
                 _bigButton(
                   context,
-                  'Doctor Reports',
+                  t.doctorReports,
                   icon: Icons.medical_information,
                   onTap: () {
-                    Navigator.pushNamed(
-                        context, HospitalDoctorReportsScreen.route);
+                    Navigator.pushNamed(context,
+                        HospitalDoctorReportsScreen.route);
                   },
                 ),
                 const SizedBox(height: 12),
+
                 _bigButton(
                   context,
-                  'Patient Reports',
+                  t.patientReports,
                   icon: Icons.people,
                   onTap: () {
-                    Navigator.pushNamed(
-                        context, HospitalPatientReportsScreen.route);
+                    Navigator.pushNamed(context,
+                        HospitalPatientReportsScreen.route);
                   },
                 ),
+
                 const SizedBox(height: 30),
               ],
             ),
@@ -194,8 +211,8 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
           const SizedBox(width: 8),
           Expanded(child: Text(text)),
           Text(value.toString(),
-              style:
-              const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 16)),
         ],
       ),
     );
@@ -220,8 +237,11 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 }
 
 class _SearchBox extends StatelessWidget {
+  final String hint;
   final ValueChanged<String> onChanged;
-  const _SearchBox({required this.onChanged});
+
+  const _SearchBox({required this.onChanged, required this.hint});
+
   @override
   Widget build(BuildContext context) {
     return TextField(
@@ -229,12 +249,13 @@ class _SearchBox extends StatelessWidget {
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search),
         suffixIcon: const Icon(Icons.mic_none),
-        hintText: 'Search',
+        hintText: hint,
         filled: true,
         fillColor: Colors.black.withOpacity(.05),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       ),

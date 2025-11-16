@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import 'doctor/my_shifts_screen.dart';
 import 'doctor/reviews.dart';
@@ -41,34 +42,34 @@ class _DoctorHomeState extends State<DoctorHome> {
     TextEditingController(text: _doctor?['specialization'] ?? '');
     final bioCtrl = TextEditingController(text: _doctor?['bio'] ?? '');
 
+    final t = AppLocalizations.of(context)!;
+
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Edit Profile"),
+        title: Text(t.editProfile),
         content: SingleChildScrollView(
           child: Column(
             children: [
               TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: "Name")),
+                  decoration: InputDecoration(labelText: t.name)),
               TextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: "Email")),
+                  decoration: InputDecoration(labelText: t.email)),
               TextField(
                   controller: specializationCtrl,
-                  decoration:
-                  const InputDecoration(labelText: "Specialization")),
+                  decoration: InputDecoration(labelText: t.specialization)),
               TextField(
                   controller: bioCtrl,
-                  decoration:
-                  const InputDecoration(labelText: "Bio (optional)")),
+                  decoration: InputDecoration(labelText: t.bio)),
             ],
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
+              child: Text(t.cancel)),
           ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance
@@ -85,7 +86,7 @@ class _DoctorHomeState extends State<DoctorHome> {
               Navigator.pop(context);
               _loadProfile();
             },
-            child: const Text("Save"),
+            child: Text(t.save),
           ),
         ],
       ),
@@ -94,9 +95,11 @@ class _DoctorHomeState extends State<DoctorHome> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Doctor Profile'),
+        title: Text(t.doctorProfile),
         actions: [
           IconButton(onPressed: _editDoctor, icon: const Icon(Icons.edit)),
         ],
@@ -117,19 +120,20 @@ class _DoctorProfileBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = data['approved'] == true ? 'approved' : 'pending';
-    final chips = {
-      'approved': Colors.green,
-      'pending': Colors.orange,
-      'rejected': Colors.red,
-    };
+    final t = AppLocalizations.of(context)!;
+
+    final status = data['approved'] == true
+        ? t.approved
+        : t.pending;
+
+    final statusColor =
+    data['approved'] == true ? Colors.green : Colors.orange;
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         Card(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -137,25 +141,23 @@ class _DoctorProfileBody extends StatelessWidget {
                 ListTile(
                   leading: const CircleAvatar(
                       radius: 26, child: Icon(Icons.person)),
-                  title: Text(data['name'] ?? 'Doctor'),
+                  title: Text(data['name'] ?? t.name),
                   subtitle: Text(data['email'] ?? ''),
                   trailing: Chip(
                     label: Text(status),
-                    backgroundColor:
-                    (chips[status] ?? Colors.grey).withOpacity(.15),
-                    labelStyle:
-                    TextStyle(color: chips[status] ?? Colors.grey),
+                    backgroundColor: statusColor.withOpacity(.15),
+                    labelStyle: TextStyle(color: statusColor),
                   ),
                 ),
                 const SizedBox(height: 12),
-                _kv('Specialization', data['specialization'] ?? '—'),
-                _kv('Bio', data['bio'] ?? '—'),
+                _kv(t.specialization, data['specialization'] ?? '—'),
+                _kv(t.bio, data['bio'] ?? '—'),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => _showDetails(context, data),
-                    child: const Text('details'),
+                    child: Text(t.details),
                   ),
                 )
               ],
@@ -165,25 +167,25 @@ class _DoctorProfileBody extends StatelessWidget {
         const SizedBox(height: 20),
         const Divider(),
         const SizedBox(height: 10),
-        const Text("Quick Access",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        Text(t.quickAccess,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
         _linkTile(
           context,
           icon: Icons.calendar_today,
-          title: "My Shifts",
+          title: t.myShifts,
           screen: MyShiftsScreen(doctorId: doctorId),
         ),
         _linkTile(
           context,
           icon: Icons.date_range,
-          title: "Weekly Shifts",
+          title: t.weeklyShifts,
           screen: ShiftsOverviewScreen(doctorId: doctorId),
         ),
         _linkTile(
           context,
           icon: Icons.reviews,
-          title: "Reviews",
+          title: t.reviews,
           screen: ReviewsScreen(doctorId: doctorId),
         ),
       ],
@@ -198,14 +200,15 @@ class _DoctorProfileBody extends StatelessWidget {
         SizedBox(
             width: 120,
             child: Text(k,
-                style:
-                const TextStyle(fontWeight: FontWeight.w600))),
+                style: const TextStyle(fontWeight: FontWeight.w600))),
         Expanded(child: Text(v)),
       ],
     ),
   );
 
   void _showDetails(BuildContext context, Map<String, dynamic> d) {
+    final t = AppLocalizations.of(context)!;
+
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -214,14 +217,14 @@ class _DoctorProfileBody extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            const Text('Doctor Details',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(t.doctorDetails,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
-            _kv('Name', d['name'] ?? ''),
-            _kv('Email', d['email'] ?? ''),
-            _kv('Specialization', d['specialization'] ?? ''),
-            _kv('Bio', d['bio'] ?? '—'),
-            _kv('Status', d['approved'] == true ? 'Approved' : 'Pending'),
+            _kv(t.name, d['name'] ?? ''),
+            _kv(t.email, d['email'] ?? ''),
+            _kv(t.specialization, d['specialization'] ?? ''),
+            _kv(t.bio, d['bio'] ?? '—'),
+            _kv(t.status, d['approved'] == true ? t.approved : t.pending),
           ],
         ),
       ),
@@ -235,7 +238,7 @@ class _DoctorProfileBody extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(icon, color: Color(0xFF2D515C)),
+        leading: Icon(icon, color: const Color(0xFF2D515C)),
         title: Text(title),
         trailing: const Icon(Icons.arrow_forward_ios, size: 18),
         onTap: () => Navigator.push(
@@ -253,36 +256,37 @@ class _DoctorDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Drawer(
       child: ListView(
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Color(0xFF2D515C)),
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF2D515C)),
             child: Align(
               alignment: Alignment.bottomLeft,
-              child: Text('Doctor Menu',
-                  style: TextStyle(color: Colors.white, fontSize: 20)),
+              child: Text(t.doctorMenu,
+                  style: const TextStyle(color: Colors.white, fontSize: 20)),
             ),
           ),
           ListTile(
             leading: const Icon(Icons.home),
-            title: const Text('Home'),
+            title: Text(t.home),
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
             leading: const Icon(Icons.calendar_today),
-            title: const Text('My Shifts'),
+            title: Text(t.myShifts),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => MyShiftsScreen(doctorId: doctorId)),
+                MaterialPageRoute(builder: (_) => MyShiftsScreen(doctorId: doctorId)),
               );
             },
           ),
           ListTile(
             leading: const Icon(Icons.date_range),
-            title: const Text('Weekly Shifts'),
+            title: Text(t.weeklyShifts),
             onTap: () {
               Navigator.push(
                 context,
@@ -293,7 +297,7 @@ class _DoctorDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.reviews),
-            title: const Text('Reviews'),
+            title: Text(t.reviews),
             onTap: () {
               Navigator.push(
                 context,
@@ -304,7 +308,7 @@ class _DoctorDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            title: Text(t.settings),
             onTap: () {
               Navigator.push(
                 context,
@@ -315,7 +319,7 @@ class _DoctorDrawer extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout'),
+            title: Text(t.logout),
             onTap: () => AuthService.logoutAndGoWelcome(context),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../routes.dart';
 import '../widgets/app_button.dart';
 
@@ -7,6 +8,8 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -14,13 +17,35 @@ class RoleSelectionScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.assignment_turned_in_outlined, size: 120, color: Color(0xFF9AAAB2)),
+              const Icon(
+                Icons.assignment_turned_in_outlined,
+                size: 120,
+                color: Color(0xFF9AAAB2),
+              ),
               const SizedBox(height: 16),
-              AppButton(text: 'Hospital', onPressed: () => Navigator.pushNamed(context, AppRoutes.regHospital)),
+
+              Text(
+                t.selectRole,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 24),
+
+              AppButton(
+                text: t.roleHospital,
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.regHospital),
+              ),
               const SizedBox(height: 12),
-              AppButton(text: 'Doctor', onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor)),
+
+              AppButton(
+                text: t.roleDoctor,
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor),
+              ),
               const SizedBox(height: 12),
-              AppButton(text: 'patient', onPressed: () => Navigator.pushNamed(context, AppRoutes.regPatient)),
+
+              AppButton(
+                text: t.rolePatient,
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.regPatient),
+              ),
             ],
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'medical_records.dart';
 import 'report_details.dart';
+import 'package:hos_app/l10n/app_localizations.dart';
 
 class AddReport extends StatefulWidget {
   final String appointmentId;
@@ -36,7 +37,6 @@ class _AddReportState extends State<AddReport> {
     _loadExistingReport();
   }
 
-  // تحميل التقرير الحالي (إذا كان موجود)
   Future<void> _loadExistingReport() async {
     final snap = await _db
         .collection('reports')
@@ -69,13 +69,15 @@ class _AddReportState extends State<AddReport> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE8F2F3),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2D515C),
-        title: const Text(
-          "Add / Update Report",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          t.reportAddUpdate,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -84,36 +86,36 @@ class _AddReportState extends State<AddReport> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text("General Report",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(t.generalReport,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _general,
               maxLines: 3,
-              decoration: _input("Enter diagnosis or general notes"),
+              decoration: _input(t.generalReportHint),
               validator: (v) =>
-              v == null || v.isEmpty ? "Please write a short report" : null,
+              v == null || v.isEmpty ? t.generalReportRequired : null,
             ),
             const SizedBox(height: 20),
 
-            const Text("Patient Medical Info",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(t.patientMedicalInfo,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _chronic,
-              decoration: _input("Chronic diseases (comma-separated)"),
+              decoration: _input(t.chronicHint),
             ),
             const SizedBox(height: 10),
             TextFormField(
               controller: _allergies,
-              decoration: _input("Allergies"),
+              decoration: _input(t.allergyHint),
             ),
             const SizedBox(height: 20),
 
-            const Text("Prescription",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(t.medicineSection,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
-            _medicineTable(),
+            _medicineTable(t),
             const SizedBox(height: 30),
 
             ElevatedButton(
@@ -130,29 +132,30 @@ class _AddReportState extends State<AddReport> {
                   width: 22,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white))
-                  : const Text("Submit / Update Report",
-                  style: TextStyle(
+                  : Text(t.saveReport,
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
             ),
             const SizedBox(height: 30),
 
-            const Text("Previous Reports",
-                style: TextStyle(
+            Text(t.previousReports,
+                style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 17,
                     color: Colors.black87)),
             const SizedBox(height: 8),
-            _previousReports(),
+            _previousReports(t),
           ],
         ),
       ),
     );
   }
 
-  // حفظ أو تحديث التقرير
   Future<void> _submitReport() async {
+    final t = AppLocalizations.of(context)!;
+
     if (!_form.currentState!.validate()) return;
     setState(() => _saving = true);
 
@@ -199,24 +202,8 @@ class _AddReportState extends State<AddReport> {
         });
       }
 
-      await _db.collection('users').doc(widget.patientId).set({
-        'generalCondition': _general.text.trim(),
-        'chronic': _chronic.text.trim().isNotEmpty
-            ? _chronic.text.split(',').map((e) => e.trim()).toList()
-            : [],
-        'allergies': _allergies.text.trim(),
-        'medications':
-        meds.map((m) => m['name']).where((e) => e!.isNotEmpty).join(', '),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      await _db.collection('appointments').doc(widget.appointmentId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-      });
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report saved successfully')),
+        SnackBar(content: Text(t.saveReportSuccess)),
       );
 
       Navigator.pushReplacement(
@@ -230,15 +217,15 @@ class _AddReportState extends State<AddReport> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${t.errorPrefix} $e")),
+      );
     } finally {
       setState(() => _saving = false);
     }
   }
 
-  // جدول الأدوية
-  Widget _medicineTable() {
+  Widget _medicineTable(AppLocalizations t) {
     return Column(
       children: [
         Container(
@@ -262,14 +249,14 @@ class _AddReportState extends State<AddReport> {
               4: FlexColumnWidth(0.6),
             },
             children: [
-              const TableRow(
-                decoration: BoxDecoration(color: Color(0xFF2D515C)),
+              TableRow(
+                decoration: const BoxDecoration(color: Color(0xFF2D515C)),
                 children: [
-                  _TableHeader("Medicine"),
-                  _TableHeader("Dosage"),
-                  _TableHeader("Days"),
-                  _TableHeader("Notes"),
-                  _TableHeader(""),
+                  _TableHeader(t.medicineName),
+                  _TableHeader(t.medicineDosage),
+                  _TableHeader(t.medicineDays),
+                  _TableHeader(t.medicineNotes),
+                  const _TableHeader(""),
                 ],
               ),
               ..._medicines.asMap().entries.map((entry) {
@@ -278,19 +265,20 @@ class _AddReportState extends State<AddReport> {
                 return TableRow(children: [
                   _TableCell(TextFormField(
                       controller: med['name'],
-                      decoration: _miniInput("Name", color: Colors.grey[200]!),
+                      decoration: _miniInput(t.medicineNameHint,
+                          color: Colors.grey[200]!),
                       validator: (v) =>
-                      v == null || v.isEmpty ? "Required" : null)),
+                      v == null || v.isEmpty ? t.requiredField : null)),
                   _TableCell(TextFormField(
                       controller: med['dosage'],
-                      decoration: _miniInput("2x/day"))),
+                      decoration: _miniInput(t.medicineDosageHint))),
                   _TableCell(TextFormField(
                       controller: med['days'],
                       keyboardType: TextInputType.number,
-                      decoration: _miniInput("3"))),
+                      decoration: _miniInput(t.medicineDaysHint))),
                   _TableCell(TextFormField(
                       controller: med['notes'],
-                      decoration: _miniInput("Notes"))),
+                      decoration: _miniInput(t.medicineNotesHint))),
                   _TableCell(IconButton(
                       icon: const Icon(Icons.delete, color: Colors.redAccent),
                       onPressed: () => _removeMedicineRow(i))),
@@ -305,16 +293,17 @@ class _AddReportState extends State<AddReport> {
           child: TextButton.icon(
             onPressed: _addMedicineRow,
             icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2D515C)),
-            label: const Text("Add Medicine",
-                style: TextStyle(color: Color(0xFF2D515C))),
+            label: Text(
+              t.addMedicine,
+              style: const TextStyle(color: Color(0xFF2D515C)),
+            ),
           ),
         ),
       ],
     );
   }
 
-  // التقارير السابقة
-  Widget _previousReports() {
+  Widget _previousReports(AppLocalizations t) {
     return StreamBuilder<QuerySnapshot>(
       stream: _db
           .collection('reports')
@@ -326,7 +315,7 @@ class _AddReportState extends State<AddReport> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snap.data!.docs.isEmpty) {
-          return const Text("No previous reports found.");
+          return Text(t.noReports);
         }
 
         return Column(
@@ -338,8 +327,8 @@ class _AddReportState extends State<AddReport> {
                 : '—';
             return Card(
               child: ListTile(
-                title: Text(d['report'] ?? 'No details'),
-                subtitle: Text('Date: $date'),
+                title: Text(d['report'] ?? t.noDetails),
+                subtitle: Text("${t.dateLabel}: $date"),
                 trailing: const Icon(Icons.arrow_forward_ios,
                     size: 16, color: Color(0xFF2D515C)),
                 onTap: () {

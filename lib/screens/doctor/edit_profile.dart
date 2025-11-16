@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 class EditDoctorProfileScreen extends StatefulWidget {
   final String doctorId;
@@ -25,9 +26,9 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
   bool _saving = false;
   String? _error;
 
-  final Color primaryColor = const Color(0xFF00695C); // Teal 800
-  final Color lightColor = const Color(0xFFE0F2F1);   // Teal 50
-  final Color accentColor = const Color(0xFF009688);  // Teal 500
+  final Color primaryColor = const Color(0xFF00695C);
+  final Color lightColor = const Color(0xFFE0F2F1);
+  final Color accentColor = const Color(0xFF009688);
 
   @override
   void initState() {
@@ -50,8 +51,10 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final t = AppLocalizations.of(context)!;
+
     if (_name.text.trim().isEmpty || _email.text.trim().isEmpty) {
-      setState(() => _error = 'Please fill all required fields.');
+      setState(() => _error = t.fillRequired);
       return;
     }
 
@@ -74,7 +77,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Profile updated successfully!'),
+            content: Text(t.saveSuccess),
             backgroundColor: primaryColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -82,7 +85,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
         );
       }
     } catch (e) {
-      setState(() => _error = 'Error saving profile: $e');
+      setState(() => _error = "${t.saveError} $e");
     } finally {
       setState(() => _saving = false);
     }
@@ -105,12 +108,14 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: lightColor,
       appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          t.editProfile,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
         centerTitle: true,
@@ -128,27 +133,27 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
               children: [
                 TextField(
                   controller: _name,
-                  decoration: _fieldDecoration('Full Name', Icons.person),
+                  decoration: _fieldDecoration(t.fullName, Icons.person),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _email,
-                  decoration: _fieldDecoration('Email', Icons.email),
+                  decoration: _fieldDecoration(t.email, Icons.email),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _specialization,
-                  decoration: _fieldDecoration('Specialization', Icons.medical_information),
+                  decoration: _fieldDecoration(t.specialization, Icons.medical_information),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _address,
-                  decoration: _fieldDecoration('Address', Icons.location_on),
+                  decoration: _fieldDecoration(t.address, Icons.location_on),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _image,
-                  decoration: _fieldDecoration('Profile Image URL (optional)', Icons.image),
+                  decoration: _fieldDecoration(t.profileImageUrl, Icons.image),
                 ),
                 const SizedBox(height: 20),
 
@@ -174,9 +179,9 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                     ),
                     child: _saving
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      'Save Changes',
-                      style: TextStyle(
+                        : Text(
+                      t.saveChanges,
+                      style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

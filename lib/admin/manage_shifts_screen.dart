@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/admin_drawer.dart';
 import '../services/firestore_service.dart';
 
@@ -38,18 +39,20 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       drawer: const AdminDrawer(),
       appBar: AppBar(
-        title: const Text('Manage Shifts'),
+        title: Text(t.manageShifts),
         actions: [
           IconButton(
-            tooltip: 'Filter by date range',
+            tooltip: t.filterByDateRange,
             icon: const Icon(Icons.filter_alt),
             onPressed: _pickRange,
           ),
           IconButton(
-            tooltip: 'Clear filters',
+            tooltip: t.clearFilters,
             icon: const Icon(Icons.clear_all),
             onPressed: () => setState(() => _range = null),
           ),
@@ -58,19 +61,18 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: hospId == null ? null : _openCreateDialog,
         icon: const Icon(Icons.add),
-        label: const Text('Add shift'),
+        label: Text(t.addShift),
       ),
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // شريط بحث
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
             child: TextField(
               onChanged: (s) => setState(() => _search = s.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search by doctor / specialization',
+                hintText: t.searchDoctorOrSpecialization,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.black.withOpacity(.05),
@@ -107,8 +109,10 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
     if (res != null) setState(() => _range = res);
   }
 
-  // ========== إنشاء شفت ==========
+  // ===================== إنشاء شفت =====================
   Future<void> _openCreateDialog() async {
+    final t = AppLocalizations.of(context)!;
+
     _selectedDoctorId = null;
     _selectedDoctorName = null;
     _selectedDoctorSpec = null;
@@ -116,7 +120,6 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
     _start = null;
     _end = null;
 
-    // الأطباء من users (الموافق عليهم وينتمون لنفس المستشفى)
     final doctorsSnap = await FirebaseFirestore.instance
         .collection('users')
         .where('role', isEqualTo: 'doctor')
@@ -137,7 +140,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (_, setStateDialog) => AlertDialog(
-          title: const Text('Add shift'),
+          title: Text(t.addShift),
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -147,7 +150,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                       .map(
                         (m) => DropdownMenuItem<String>(
                       value: m['id'] as String,
-                      child: Text('${m['name']}  •  ${m['specialization']}'),
+                      child: Text('${m['name']} • ${m['specialization']}'),
                     ),
                   )
                       .toList(),
@@ -160,12 +163,12 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                       _selectedDoctorSpec = m['specialization'] as String?;
                     });
                   },
-                  decoration: const InputDecoration(labelText: 'Doctor'),
+                  decoration: InputDecoration(labelText: t.doctor),
                 ),
                 const SizedBox(height: 10),
                 _PickerRow(
-                  label: 'Date',
-                  value: _selectedDate == null ? 'Select date' : _fmtDate(_selectedDate!),
+                  label: t.date,
+                  value: _selectedDate == null ? t.selectDate : _fmtDate(_selectedDate!),
                   onTap: () async {
                     final now = DateTime.now();
                     final picked = await showDatePicker(
@@ -179,8 +182,8 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                 ),
                 const SizedBox(height: 10),
                 _PickerRow(
-                  label: 'Start',
-                  value: _start == null ? 'Select time' : _fmtTime(_start!),
+                  label: t.start,
+                  value: _start == null ? t.selectTime : _fmtTime(_start!),
                   onTap: () async {
                     final picked = await showTimePicker(
                       context: context,
@@ -191,8 +194,8 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                 ),
                 const SizedBox(height: 10),
                 _PickerRow(
-                  label: 'End',
-                  value: _end == null ? 'Select time' : _fmtTime(_end!),
+                  label: t.end,
+                  value: _end == null ? t.selectTime : _fmtTime(_end!),
                   onTap: () async {
                     final picked = await showTimePicker(
                       context: context,
@@ -205,7 +208,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
             ElevatedButton(
               onPressed: _saving
                   ? null
@@ -215,7 +218,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                     _start == null ||
                     _end == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please complete all fields')),
+                    SnackBar(content: Text(t.completeAllFields)),
                   );
                   return;
                 }
@@ -223,7 +226,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                 final endMin = _end!.hour * 60 + _end!.minute;
                 if (endMin <= startMin) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('End time must be after start time')),
+                    SnackBar(content: Text(t.endTimeAfterStart)),
                   );
                   return;
                 }
@@ -241,7 +244,7 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                     'doctorId': _selectedDoctorId,
                     'doctorName': _selectedDoctorName,
                     'specialization': _selectedDoctorSpec,
-                    'date': dateStr, // YYYY-MM-DD
+                    'date': dateStr,
                     'dateTs': Timestamp.fromDate(DateTime(
                       _selectedDate!.year,
                       _selectedDate!.month,
@@ -258,16 +261,16 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                   if (mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('Shift added')));
+                        .showSnackBar(SnackBar(content: Text(t.shiftAdded)));
                   }
                 } catch (e) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      .showSnackBar(SnackBar(content: Text('${t.error}: $e')));
                 } finally {
                   setState(() => _saving = false);
                 }
               },
-              child: Text(_saving ? 'Saving...' : 'Save'),
+              child: Text(_saving ? t.saving : t.save),
             ),
           ],
         ),
@@ -275,8 +278,10 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
     );
   }
 
-  // ========== تعديل شفت ==========
+  // ===================== تعديل شفت =====================
   Future<void> _openEditDialog(String shiftId, Map<String, dynamic> data) async {
+    final t = AppLocalizations.of(context)!;
+
     _selectedDoctorId = data['doctorId'] as String?;
     _selectedDoctorName = data['doctorName'] as String?;
     _selectedDoctorSpec = data['specialization'] as String?;
@@ -288,13 +293,13 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (_, setStateDialog) => AlertDialog(
-          title: const Text('Edit shift'),
+          title: Text(t.edit),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _PickerRow(
-                label: 'Date',
-                value: _selectedDate == null ? 'Select date' : _fmtDate(_selectedDate!),
+                label: t.date,
+                value: _selectedDate == null ? t.selectDate : _fmtDate(_selectedDate!),
                 onTap: () async {
                   final now = DateTime.now();
                   final picked = await showDatePicker(
@@ -308,8 +313,8 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
               ),
               const SizedBox(height: 10),
               _PickerRow(
-                label: 'Start',
-                value: _start == null ? 'Select time' : _fmtTime(_start!),
+                label: t.start,
+                value: _start == null ? t.selectTime : _fmtTime(_start!),
                 onTap: () async {
                   final picked = await showTimePicker(
                     context: context,
@@ -320,8 +325,8 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
               ),
               const SizedBox(height: 10),
               _PickerRow(
-                label: 'End',
-                value: _end == null ? 'Select time' : _fmtTime(_end!),
+                label: t.end,
+                value: _end == null ? t.selectTime : _fmtTime(_end!),
                 onTap: () async {
                   final picked = await showTimePicker(
                     context: context,
@@ -333,22 +338,23 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
             ElevatedButton(
               onPressed: _saving
                   ? null
                   : () async {
                 if (_selectedDate == null || _start == null || _end == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please complete all fields')),
+                    SnackBar(content: Text(t.completeAllFields)),
                   );
                   return;
                 }
+
                 final startMin = _start!.hour * 60 + _start!.minute;
                 final endMin = _end!.hour * 60 + _end!.minute;
                 if (endMin <= startMin) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('End time must be after start time')),
+                    SnackBar(content: Text(t.endTimeAfterStart)),
                   );
                   return;
                 }
@@ -377,16 +383,16 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                   if (mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('Shift updated')));
+                        .showSnackBar(SnackBar(content: Text(t.shiftUpdated)));
                   }
                 } catch (e) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text('Error: $e')));
+                      .showSnackBar(SnackBar(content: Text('${t.error}: $e')));
                 } finally {
                   setState(() => _saving = false);
                 }
               },
-              child: Text(_saving ? 'Saving...' : 'Update'),
+              child: Text(_saving ? t.saving : t.update),
             ),
           ],
         ),
@@ -394,19 +400,23 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
     );
   }
 
-  // ========== حذف شفت ==========
+  // ===================== حذف شفت =====================
   Future<void> _deleteShift(String shiftId) async {
+    final t = AppLocalizations.of(context)!;
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete shift'),
-        content: const Text('Are you sure you want to delete this shift?'),
+        title: Text(t.delete),
+        content: Text(t.deleteConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t.cancel)),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true), child: Text(t.delete)),
         ],
       ),
     );
+
     if (ok == true) {
       await FirebaseFirestore.instance
           .collection('hospitals')
@@ -414,14 +424,15 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
           .collection('shifts')
           .doc(shiftId)
           .delete();
+
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Shift deleted')));
+            .showSnackBar(SnackBar(content: Text(t.shiftDeleted)));
       }
     }
   }
 
-  // ===== Helpers =====
+  // ===================== Helpers =====================
   static String _fmtDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -464,10 +475,12 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
   }
 }
 
+// ===================== Picker Row =====================
 class _PickerRow extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback onTap;
+
   const _PickerRow({
     required this.label,
     required this.value,
@@ -519,6 +532,8 @@ class _ShiftsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final ref = FirebaseFirestore.instance
         .collection('hospitals')
         .doc(hospitalId)
@@ -556,7 +571,7 @@ class _ShiftsList extends StatelessWidget {
             return at.compareTo(bt);
           });
 
-        if (list.isEmpty) return const Center(child: Text('No shifts'));
+        if (list.isEmpty) return Center(child: Text(t.noShifts));
 
         return ListView.separated(
           padding: const EdgeInsets.all(16),
@@ -592,11 +607,11 @@ class _ShiftsList extends StatelessWidget {
                   children: [
                     TextButton(
                       onPressed: () => onEdit(id, Map<String, dynamic>.from(m)),
-                      child: const Text('Edit', style: TextStyle(color: Colors.white)),
+                      child: Text(t.edit, style: const TextStyle(color: Colors.white)),
                     ),
                     TextButton(
                       onPressed: () => onDelete(id),
-                      child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      child: Text(t.delete, style: const TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),

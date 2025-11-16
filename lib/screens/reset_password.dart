@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../routes.dart';
-import '../widgets/app_logo.dart'; // شعار أعلى الصفحة
+import '../widgets/app_logo.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -19,31 +21,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool saving = false;
   String? err;
 
-  // Regex: حرف صغير + حرف كبير + رقم + رمز خاص + طول ≥ 8
   final RegExp _passRe = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$'
-  );
+      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$');
 
-  String? _validatePassword(String? v) {
-    if (v == null || v.isEmpty) return 'Password is required';
-    if (!_passRe.hasMatch(v)) {
-      return 'Min 8 chars incl. upper, lower, number & special';
-    }
+  String? _validatePassword(String? v, AppLocalizations t) {
+    if (v == null || v.isEmpty) return t.passwordRequired;
+    if (!_passRe.hasMatch(v)) return t.passwordRules;
     return null;
-    // لو تبي نص عربي:
-    // return 'الحد الأدنى 8 أحرف وتتضمن حرف كبير وصغير ورقم ورمز خاص';
   }
 
-  String? _validateConfirm(String? v) {
-    if (v == null || v.isEmpty) return 'Please re-enter password';
-    if (v != _p1.text) return 'Passwords do not match';
+  String? _validateConfirm(String? v, AppLocalizations t) {
+    if (v == null || v.isEmpty) return t.confirmPasswordRequired;
+    if (v != _p1.text) return t.passwordsNotMatch;
     return null;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // نستقبل الإيميل من EnterCodeScreen
     email = ModalRoute.of(context)?.settings.arguments as String? ?? '';
   }
 
@@ -55,7 +50,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final t = AppLocalizations.of(context)!;
+
     if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       err = null;
       saving = true;
@@ -68,40 +66,41 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (user != null) {
         try {
           await user.updatePassword(_p1.text.trim());
+
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Password updated successfully')),
+            SnackBar(content: Text(t.passwordUpdated)),
           );
+
           Navigator.pushNamedAndRemoveUntil(
               context, AppRoutes.login, (_) => false);
           return;
+
         } on FirebaseAuthException catch (e) {
-          // يتطلب recent login
           if (e.code != 'requires-recent-login') {
             setState(() => err = e.message ?? e.code);
             return;
           }
-          // وإلا نكمل بإرسال رابط رسمي ثم نرجع للّوج إن
         }
       }
 
-      // لا يوجد مستخدم أو يتطلب recent login → نرسل رابط رسمي
+      // No user or recent login required → send reset link
       if (email.isNotEmpty) {
         await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('We emailed you a reset link. Please check your inbox.'),
-          ),
+          SnackBar(content: Text(t.emailResetLink)),
         );
       } else {
-        setState(() => err = 'No email found for reset.');
+        setState(() => err = t.noEmailFound);
       }
 
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
             context, AppRoutes.login, (_) => false);
       }
+
     } catch (e) {
       if (mounted) setState(() => err = e.toString());
     } finally {
@@ -111,6 +110,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -121,55 +122,63 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AppLogo(), // الشعار بالأعلى
+                const AppLogo(),
+
                 Text(
-                  'Reset\npassword',
+                  t.resetPasswordTitle,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
+
                 const SizedBox(height: 18),
 
                 TextFormField(
                   controller: _p1,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'New password',
-                    hintText: 'Enter new password',
+                  decoration: InputDecoration(
+                    labelText: t.newPassword,
+                    hintText: t.enterNewPassword,
                   ),
-                  validator: _validatePassword,
+                  validator: (v) => _validatePassword(v, t),
                 ),
+
                 const SizedBox(height: 12),
+
                 TextFormField(
                   controller: _p2,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm new password',
-                    hintText: 'Re-enter new password',
+                  decoration: InputDecoration(
+                    labelText: t.confirmNewPassword,
+                    hintText: t.reenterNewPassword,
                   ),
-                  validator: _validateConfirm,
+                  validator: (v) => _validateConfirm(v, t),
                 ),
 
                 const SizedBox(height: 8),
-                // قواعد الباسورد (تذكير للمستخدم)
-                const Text(
-                  'Password must have at least 8 characters, including upper & lower letters, a number, and a special character.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+
+                Text(
+                  t.passwordHintText,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
 
                 const SizedBox(height: 12),
+
                 if (err != null)
                   Text(err!, style: const TextStyle(color: Colors.red)),
 
                 const SizedBox(height: 12),
+
                 ElevatedButton(
                   onPressed: saving ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
                     child: saving
                         ? const CircularProgressIndicator()
-                        : const Text('Update'),
+                        : Text(t.update),
                   ),
                 ),
+
                 const SizedBox(height: 24),
               ],
             ),

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/app_localizations.dart';
 import 'patient_drawer.dart';
 import 'ui.dart';
 
@@ -11,6 +12,7 @@ class AppointmentPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     final col = FirebaseFirestore.instance
@@ -20,21 +22,21 @@ class AppointmentPage extends StatelessWidget {
         .orderBy('time', descending: true);
 
     return AppScaffold(
-      title: 'My appointments',
+      title: t.myAppointments, // My appointments
       drawer: const PatientDrawer(),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: col.snapshots(),
         builder: (ctx, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF2D515C)));
+            return Center(
+                child: CircularProgressIndicator(color: const Color(0xFF2D515C)));
           }
 
           if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'No appointments yet',
-                style: TextStyle(color: Colors.black54, fontSize: 16),
+                t.noAppointments, // No appointments yet
+                style: const TextStyle(color: Colors.black54, fontSize: 16),
               ),
             );
           }
@@ -55,7 +57,7 @@ class AppointmentPage extends StatelessWidget {
                   : DateTime.tryParse(dtRaw.toString());
               final formattedDate = dt != null
                   ? DateFormat('yyyy-MM-dd • hh:mm a').format(dt)
-                  : 'Unknown';
+                  : t.unknown;
 
               final status = (d['status'] ?? 'booked').toString();
               Color statusColor;
@@ -99,16 +101,16 @@ class AppointmentPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Doctor: ${d['doctorName'] ?? ''}',
+                      '${t.doctor}: ${d['doctorName'] ?? ''}',
                       style: const TextStyle(color: Colors.white70),
                     ),
                     Text(
-                      'Time: $formattedDate',
+                      '${t.timeLabel}: $formattedDate',
                       style: const TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Status: $status',
+                      '${t.status}: $status',
                       style: TextStyle(
                         color: statusColor,
                         fontWeight: FontWeight.bold,
@@ -116,7 +118,7 @@ class AppointmentPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
 
-                    //  الأزرار
+                    // Actions
                     if (status == 'booked' || status == 'confirmed')
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -126,15 +128,16 @@ class AppointmentPage extends StatelessWidget {
                             onPressed: () async {
                               await docRef.update({'status': 'cancelled'});
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Appointment cancelled'),
+                                SnackBar(
+                                  content: Text(t.appointmentCancelled),
                                   backgroundColor: Colors.redAccent,
                                 ),
                               );
                             },
                             icon: const Icon(Icons.cancel, color: Colors.redAccent),
-                            label: const Text('Cancel',
-                                style: TextStyle(color: Colors.redAccent)),
+                            label: Text(t.cancel,
+                                style:
+                                const TextStyle(color: Colors.redAccent)),
                           ),
                           const SizedBox(width: 8),
 
@@ -142,16 +145,17 @@ class AppointmentPage extends StatelessWidget {
                           TextButton.icon(
                             onPressed: () {
                               _showAvailableSlots(
-                                context,
-                                d['doctorId'],
-                                d['doctorName'],
-                                d['hospitalName'],
-                                docRef,
-                              );
+                                  context,
+                                  d['doctorId'],
+                                  d['doctorName'],
+                                  d['hospitalName'],
+                                  docRef);
                             },
-                            icon: const Icon(Icons.edit_calendar, color: Colors.white70),
-                            label: const Text('Reschedule',
-                                style: TextStyle(color: Colors.white70)),
+                            icon: const Icon(Icons.edit_calendar,
+                                color: Colors.white70),
+                            label: Text(t.reschedule,
+                                style:
+                                const TextStyle(color: Colors.white70)),
                           ),
                         ],
                       ),
@@ -165,7 +169,6 @@ class AppointmentPage extends StatelessWidget {
     );
   }
 
-  //  نفس نظام السيرش
   void _showAvailableSlots(BuildContext ctx, String doctorId, String doctorName,
       String hospitalName, DocumentReference<Map<String, dynamic>> oldRef) {
     showModalBottomSheet(
@@ -187,7 +190,8 @@ class AppointmentPage extends StatelessWidget {
   }
 }
 
-// Widget جديد لعرض الشفتات المتاحة فقط (بدون الأوقات المنتهية)
+// -------------- SHIFT LIST --------------
+
 class _RescheduleShiftList extends StatelessWidget {
   final String doctorId;
   final String doctorName;
@@ -203,6 +207,8 @@ class _RescheduleShiftList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final now = DateTime.now();
     final todayStart = Timestamp.fromDate(DateTime(now.year, now.month, now.day));
     final endDate = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 30));
@@ -220,12 +226,12 @@ class _RescheduleShiftList extends StatelessWidget {
         stream: col.snapshots(),
         builder: (ctx, snap) {
           if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator(color: Colors.teal));
+            return Center(child: CircularProgressIndicator(color: Colors.teal));
           }
 
           final docs = snap.data!.docs;
           if (docs.isEmpty) {
-            return const Center(child: Text('No available shifts'));
+            return Center(child: Text(t.noAvailableShifts));
           }
 
           return ListView(
@@ -239,15 +245,20 @@ class _RescheduleShiftList extends StatelessWidget {
                 future: FirebaseFirestore.instance
                     .collection('appointments')
                     .where('doctorId', isEqualTo: doctorId)
-                    .where('time', isGreaterThanOrEqualTo:
-                Timestamp.fromDate(DateTime(date.year, date.month, date.day)))
-                    .where('time', isLessThan:
-                Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1)))
+                    .where('time',
+                    isGreaterThanOrEqualTo: Timestamp.fromDate(
+                        DateTime(date.year, date.month, date.day)))
+                    .where(
+                  'time',
+                  isLessThan: Timestamp.fromDate(
+                      DateTime(date.year, date.month, date.day + 1)),
+                )
                     .get(),
                 builder: (ctx, bookedSnap) {
                   if (!bookedSnap.hasData) return const SizedBox.shrink();
 
-                  final bookedTimes = bookedSnap.data!.docs.map((doc) {
+                  final bookedTimes =
+                  bookedSnap.data!.docs.map((doc) {
                     final ts = doc['time'] as Timestamp;
                     final dt = ts.toDate();
                     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
@@ -255,25 +266,26 @@ class _RescheduleShiftList extends StatelessWidget {
 
                   final availableSlots = _generateHourlySlots(start, end)
                       .where((slot) {
-                    final slotParts = slot.split(':').map(int.parse).toList();
-                    final slotTime = DateTime(
-                        date.year, date.month, date.day, slotParts[0], slotParts[1]);
+                    final parts = slot.split(':').map(int.parse).toList();
+                    final slotTime = DateTime(date.year, date.month, date.day,
+                        parts[0], parts[1]);
                     return slotTime.isAfter(DateTime.now()) &&
                         !bookedTimes.contains(slot);
-                  })
-                      .toList();
+                  }).toList();
 
                   return ExpansionTile(
-                    title: Text('Date: ${DateFormat('yyyy-MM-dd').format(date)}'),
-                    subtitle: Text('${availableSlots.length} slots available'),
+                    title:
+                    Text('${t.date}: ${DateFormat('yyyy-MM-dd').format(date)}'),
+                    subtitle: Text(
+                        '${availableSlots.length} ${t.slotsAvailable}'),
                     children: availableSlots.map((slot) {
                       return ListTile(
-                        title: Text('Time: $slot'),
+                        title: Text('${t.timeLabel}: $slot'),
                         trailing: ElevatedButton(
                           onPressed: () async {
-                            final slotParts = slot.split(':').map(int.parse).toList();
-                            final newDate = DateTime(
-                                date.year, date.month, date.day, slotParts[0], slotParts[1]);
+                            final p = slot.split(':').map(int.parse).toList();
+                            final newDate = DateTime(date.year, date.month,
+                                date.day, p[0], p[1]);
 
                             await oldRef.update({
                               'time': Timestamp.fromDate(newDate),
@@ -285,13 +297,13 @@ class _RescheduleShiftList extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                      'Appointment rescheduled to $slot on ${DateFormat('yyyy-MM-dd').format(date)}'),
+                                      '${t.rescheduledTo} $slot / ${DateFormat('yyyy-MM-dd').format(date)}'),
                                   backgroundColor: Colors.teal,
                                 ),
                               );
                             }
                           },
-                          child: const Text('Select'),
+                          child: Text(t.select),
                         ),
                       );
                     }).toList(),
@@ -307,10 +319,10 @@ class _RescheduleShiftList extends StatelessWidget {
 
   static List<String> _generateHourlySlots(String start, String end) {
     try {
-      final sParts = start.split(':').map(int.parse).toList();
-      final eParts = end.split(':').map(int.parse).toList();
-      final sTime = DateTime(2024, 1, 1, sParts[0], sParts[1]);
-      final eTime = DateTime(2024, 1, 1, eParts[0], eParts[1]);
+      final s = start.split(':').map(int.parse).toList();
+      final e = end.split(':').map(int.parse).toList();
+      final sTime = DateTime(2024, 1, 1, s[0], s[1]);
+      final eTime = DateTime(2024, 1, 1, e[0], e[1]);
       final diff = eTime.difference(sTime).inHours;
       return List.generate(diff, (i) {
         final t = sTime.add(Duration(hours: i));

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'patient_drawer.dart';
 import 'qr_page.dart';
 import 'ui.dart';
@@ -29,7 +30,9 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   final _allergy = TextEditingController();
   final _meds = TextEditingController();
 
-  final List<String> bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  final List<String> bloodTypes = [
+    'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'
+  ];
 
   late Future<DocumentSnapshot<Map<String, dynamic>>> _futureProfile;
 
@@ -37,7 +40,8 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    _futureProfile = FirebaseFirestore.instance.collection('users').doc(uid).get();
+    _futureProfile =
+        FirebaseFirestore.instance.collection('users').doc(uid).get();
   }
 
   @override
@@ -57,7 +61,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
-    final minAllowed = now.subtract(const Duration(days: 7)); // أقل من اليوم بـ7 أيام
+    final minAllowed = now.subtract(const Duration(days: 7));
     final picked = await showDatePicker(
       context: context,
       initialDate: now.subtract(const Duration(days: 365 * 20)),
@@ -72,34 +76,33 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   }
 
   Future<void> _save(String uid) async {
+    final t = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
-      // تحقق من الرقم المدني
+      // Civil number
       final civil = _civil.text.trim();
       if (civil.length != 8 || int.tryParse(civil) == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Civil number must be exactly 8 digits')),
+          SnackBar(content: Text(t.civilMustBe8Digits)),
         );
         setState(() => _saving = false);
         return;
       }
 
-      // تحقق من رقم الهاتف
+      // Phone
       final phone = _phone.text.trim();
-      final phoneReg = RegExp(r'^[79]\d{7}$'); // يبدأ ب7 أو 9 وعدده 8
+      final phoneReg = RegExp(r'^[79]\d{7}$');
       if (!phoneReg.hasMatch(phone)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Phone number must start with 7 or 9 and be 8 digits')),
+          SnackBar(content: Text(t.phoneMustStartWith7or9)),
         );
         setState(() => _saving = false);
         return;
       }
 
-      // تحويل الوزن والطول إلى int
+      // Weight & Height
       final int? weight = int.tryParse(_weight.text.trim());
       final int? height = int.tryParse(_height.text.trim());
-
-      // التحقق من أن الوزن والطول أرقام صحيحة وموجبة ولا تتعدى 3 digits
       if (weight == null ||
           height == null ||
           weight <= 0 ||
@@ -107,24 +110,27 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           weight > 999 ||
           height > 999) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Weight and height must be positive numbers with max 3 digits')),
+          SnackBar(content: Text(t.weightHeightInvalid)),
         );
         setState(() => _saving = false);
         return;
       }
 
-      // التحقق من أن تاريخ الميلاد أقدم من 7 أيام
+      // DOB
       final dobDate = DateTime.tryParse(_dob.text.trim());
       if (dobDate == null ||
           dobDate.isAfter(DateTime.now().subtract(const Duration(days: 7)))) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Date of birth must be at least 7 days before today')),
+          SnackBar(content: Text(t.dob7days)),
         );
         setState(() => _saving = false);
         return;
       }
 
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set({
         'name': _name.text.trim(),
         'civilNumber': civil,
         'dob': _dob.text.trim(),
@@ -138,13 +144,14 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       if (mounted) {
         setState(() => _edit = false);
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Profile updated successfully')));
+            .showSnackBar(SnackBar(content: Text(t.profileUpdated)));
         _futureProfile =
             FirebaseFirestore.instance.collection('users').doc(uid).get();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${t.error}: $e')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -152,6 +159,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -161,7 +169,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           return const Center(child: CircularProgressIndicator());
         }
         if (!snap.hasData || !snap.data!.exists) {
-          return const Center(child: Text('Profile not found'));
+          return Center(child: Text(t.profileNotFound));
         }
 
         final data = snap.data!.data() ?? {};
@@ -172,8 +180,12 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
         if (_civil.text.isEmpty) _civil.text = data['civilNumber'] ?? '';
         if (_dob.text.isEmpty) _dob.text = data['dob'] ?? '';
         if (_phone.text.isEmpty) _phone.text = data['phone'] ?? '';
-        if (_weight.text.isEmpty) _weight.text = data['weight']?.toString() ?? '';
-        if (_height.text.isEmpty) _height.text = data['height']?.toString() ?? '';
+        if (_weight.text.isEmpty) {
+          _weight.text = data['weight']?.toString() ?? '';
+        }
+        if (_height.text.isEmpty) {
+          _height.text = data['height']?.toString() ?? '';
+        }
         if (_bloodType.isEmpty) _bloodType = data['bloodType'] ?? '';
 
         _chronic.text =
@@ -194,71 +206,45 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _edit ? 'Edit Profile' : 'My Profile',
+                        _edit ? t.editProfile : t.myProfile,
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w600),
                       ),
                       IconButton(
                         icon: Icon(
-                            _edit ? Icons.close : Icons.edit,
-                            color: Colors.white),
+                          _edit ? Icons.close : Icons.edit,
+                          color: Colors.white,
+                        ),
                         onPressed: () => setState(() => _edit = !_edit),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
 
-                  const Text(
-                    'Personal Information',
-                    style:
-                    TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    t.personalInfo,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: [
-                        _row('Name', _name.text),
-                        _row('Civil Number', _civil.text),
-                        _row('Date of Birth', _dob.text),
-                        _row('Email', email),
-                        _row('Phone', _phone.text),
-                        _row('Weight (kg)', _weight.text),
-                        _row('Height (cm)', _height.text),
-                        _row('Blood Type', _bloodType),
-                      ],
-                    ),
-                  ),
+
+                  _infoBox(t, email),
+
                   const SizedBox(height: 16),
 
-                  const Text(
-                    'Medical Information (Doctor only)',
-                    style:
-                    TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Text(
+                    t.medicalInfoDoctorOnly,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 6),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: [
-                        _row('Chronic Diseases', _chronic.text),
-                        _row('Allergies', _allergy.text),
-                        _row('Medications', _meds.text),
-                        _row('Condition', _condition.text),
-                      ],
-                    ),
-                  ),
+
+                  _medicalBox(t),
 
                   const SizedBox(height: 20),
-                  if (_edit) _editSection(uid),
+
+                  if (_edit) _editSection(uid, t),
+
                   if (!_edit)
                     Align(
                       alignment: Alignment.centerRight,
@@ -275,7 +261,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                             'uid': uid,
                           },
                         ),
-                        child: const Text('Show QR Code'),
+                        child: Text(t.showQr),
                       ),
                     ),
                 ],
@@ -287,39 +273,86 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
     );
   }
 
-  Widget _editSection(String uid) {
+  Widget _infoBox(AppLocalizations t, String email) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          _row(t.name, _name.text),
+          _row(t.civilNumber, _civil.text),
+          _row(t.dob, _dob.text),
+          _row(t.email, email),
+          _row(t.phone, _phone.text),
+          _row(t.weight, _weight.text),
+          _row(t.height, _height.text),
+          _row(t.bloodType, _bloodType),
+        ],
+      ),
+    );
+  }
+
+  Widget _medicalBox(AppLocalizations t) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          _row(t.chronicDiseases, _chronic.text),
+          _row(t.allergies, _allergy.text),
+          _row(t.medications, _meds.text),
+          _row(t.condition, _condition.text),
+        ],
+      ),
+    );
+  }
+
+  Widget _editSection(String uid, AppLocalizations t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(color: Colors.white30, height: 30),
-        const Text('Edit Personal Information',
-            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-        _field('Name', _name),
-        _field('Civil Number', _civil, keyboardType: TextInputType.number),
+        Text(
+          t.editPersonalInfo,
+          style: const TextStyle(
+              fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+
+        _field(t.name, _name),
+        _field(t.civilNumber, _civil, keyboardType: TextInputType.number),
+
         GestureDetector(
           onTap: _pickDob,
-          child: AbsorbPointer(child: _field('Date of Birth', _dob)),
+          child: AbsorbPointer(child: _field(t.dob, _dob)),
         ),
-        _field('Phone', _phone, keyboardType: TextInputType.phone),
-        _field('Weight (kg)', _weight, keyboardType: TextInputType.number),
-        _field('Height (cm)', _height, keyboardType: TextInputType.number),
 
-        // Dropdown blood type
+        _field(t.phone, _phone, keyboardType: TextInputType.phone),
+        _field(t.weight, _weight, keyboardType: TextInputType.number),
+        _field(t.height, _height, keyboardType: TextInputType.number),
+
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: DropdownButtonFormField<String>(
             value: _bloodType.isEmpty ? null : _bloodType,
             items: bloodTypes
-                .map((type) => DropdownMenuItem(
-              value: type,
-              child:
-              Text(type, style: const TextStyle(color: Colors.white)),
-            ))
+                .map(
+                  (type) => DropdownMenuItem(
+                value: type,
+                child: Text(type,
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            )
                 .toList(),
             onChanged: (val) => setState(() => _bloodType = val ?? ''),
             icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
             decoration: InputDecoration(
-              labelText: 'Blood Type',
+              labelText: t.bloodType,
               labelStyle: const TextStyle(color: Colors.white70),
               filled: true,
               fillColor: Colors.white.withOpacity(0.1),
@@ -338,7 +371,9 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
             style: const TextStyle(color: Colors.white),
           ),
         ),
+
         const SizedBox(height: 18),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -348,17 +383,17 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                 side: const BorderSide(color: Colors.white70),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Cancel'),
+              child: Text(t.cancel),
             ),
             ElevatedButton(
               onPressed: _saving ? null : () => _save(uid),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.primary,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 10),
               ),
-              child: Text(_saving ? 'Saving...' : 'Save'),
+              child: Text(_saving ? t.saving : t.save),
             ),
           ],
         ),
@@ -401,13 +436,15 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       child: Row(
         children: [
           SizedBox(
-              width: 160,
-              child:
-              Text(key, style: const TextStyle(color: Colors.white70))),
+            width: 160,
+            child: Text(key, style: const TextStyle(color: Colors.white70)),
+          ),
           Expanded(
-            child: Text(val.isEmpty ? '—' : val,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, color: Colors.white)),
+            child: Text(
+              val.isEmpty ? '—' : val,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, color: Colors.white),
+            ),
           ),
         ],
       ),

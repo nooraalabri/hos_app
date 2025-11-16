@@ -1,23 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../patients/patient_drawer.dart';
-import '../../patients/profile_page.dart';
 import '../../services/firestore_service.dart';
-
-class ProfilePage extends StatelessWidget {
-  static const route = '/patient/profile'; // route ثابت للصفحة
-  const ProfilePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      drawer: PatientDrawer(),
-      body: SafeArea(
-        child: ProfilePageBody(),
-      ),
-    );
-  }
-}
+import '../../l10n/app_localizations.dart';
 
 class ReviewsScreen extends StatelessWidget {
   final String doctorId;
@@ -25,17 +9,18 @@ class ReviewsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🎨 ألوان موحدة من الثيم
-    const primaryColor = Color(0xFF00695C); // Teal 800
-    const lightColor = Color(0xFFE0F2F1);   // Teal 50
-    const accentColor = Color(0xFF009688);  // Teal 500
+    final t = AppLocalizations.of(context)!;
+
+    const primaryColor = Color(0xFF00695C);
+    const lightColor = Color(0xFFE0F2F1);
+    const accentColor = Color(0xFF009688);
 
     return Scaffold(
       backgroundColor: lightColor,
       appBar: AppBar(
-        title: const Text(
-          "Patient Reviews",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          t.patientReviews,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
         centerTitle: true,
@@ -45,14 +30,16 @@ class ReviewsScreen extends StatelessWidget {
         stream: FS.doctorReviews(doctorId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const Center(
+              child: CircularProgressIndicator(color: primaryColor),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                "No reviews yet",
-                style: TextStyle(
+                t.noReviews,
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.black54,
                   fontWeight: FontWeight.w500,
@@ -74,8 +61,8 @@ class ReviewsScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final data = docs[i].data() as Map<String, dynamic>;
-              final patientName = data['patientName'] ?? 'Unknown';
-              final reviewText = data['review'] ?? 'No comment provided';
+              final patientName = data['patientName'] ?? '—';
+              final reviewText = data['review'] ?? t.noComment;
               final stars = (data['stars'] ?? 0).toInt();
               final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
               final formattedDate = createdAt != null
@@ -121,7 +108,9 @@ class ReviewsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 10),
+
                       Row(
                         children: List.generate(
                           5,
@@ -132,7 +121,9 @@ class ReviewsScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 12),
+
                       Container(
                         decoration: BoxDecoration(
                           color: lightColor,

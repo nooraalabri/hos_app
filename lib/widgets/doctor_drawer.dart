@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../screens/settings_screen.dart';
 import '../screens/doctor/my_shifts_screen.dart';
 import '../screens/doctor/weekly_shifts_screen.dart';
@@ -7,10 +8,17 @@ import '../screens/doctor/reviews.dart';
 class DoctorDrawer extends StatelessWidget {
   final String doctorId;
   final String doctorName;
-  const DoctorDrawer({super.key, required this.doctorId, required this.doctorName});
+
+  const DoctorDrawer({
+    super.key,
+    required this.doctorId,
+    required this.doctorName,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!; // الترجمات
+
     return Drawer(
       child: Column(
         children: [
@@ -31,14 +39,13 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.person),
-            title: const Text("My profile"),
-            onTap: () {
-            },
+            title: Text(t.myProfile),
+            onTap: () {},
           ),
 
           ListTile(
             leading: const Icon(Icons.calendar_today),
-            title: const Text("My shifts"),
+            title: Text(t.myShifts),
             onTap: () {
               Navigator.push(
                 context,
@@ -51,7 +58,7 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.view_week),
-            title: const Text("Weekly Shifts"),
+            title: Text(t.weeklyShifts),
             onTap: () {
               Navigator.push(
                 context,
@@ -64,14 +71,13 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.smart_toy),
-            title: const Text("Chatbot"),
-            onTap: () {
-            },
+            title: Text(t.chatbot),
+            onTap: () {},
           ),
 
           ListTile(
             leading: const Icon(Icons.reviews),
-            title: const Text("Reviews"),
+            title: Text(t.reviews),
             onTap: () {
               Navigator.push(
                 context,
@@ -84,7 +90,7 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.settings),
-            title: const Text("Settings"),
+            title: Text(t.settings),
             onTap: () {
               Navigator.push(
                 context,
@@ -108,9 +114,8 @@ class DoctorDrawer extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.logout, color: Colors.white),
-              label: const Text("Logout", style: TextStyle(color: Colors.white)),
-              onPressed: () {
-              },
+              label: Text(t.logout, style: const TextStyle(color: Colors.white)),
+              onPressed: () {},
             ),
           ),
         ],

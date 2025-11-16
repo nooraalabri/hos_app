@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
 import '../services/auth_service.dart';
@@ -6,6 +8,7 @@ import '../services/firestore_service.dart';
 import '../services/notify_service.dart';
 import '../models/app_user.dart';
 import '../routes.dart';
+import 'map_picker_screen.dart';
 
 class RegisterHospitalScreen extends StatefulWidget {
   const RegisterHospitalScreen({super.key});
@@ -16,11 +19,19 @@ class RegisterHospitalScreen extends StatefulWidget {
 
 class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   final _form = GlobalKey<FormState>();
+
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _confirmPass = TextEditingController();
+  final _licenseNo = TextEditingController();
+  final _crNumber = TextEditingController();
+  final _phone = TextEditingController();
   final _location = TextEditingController();
+  final _website = TextEditingController();
+
+  double? _lat;
+  double? _lng;
 
   bool _loading = false;
   String? _error;
@@ -31,31 +42,63 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     _email.dispose();
     _pass.dispose();
     _confirmPass.dispose();
+    _licenseNo.dispose();
+    _crNumber.dispose();
+    _phone.dispose();
     _location.dispose();
+    _website.dispose();
     super.dispose();
   }
 
+  // ================= VALIDATION =================
+
   bool _isStrong(String v) {
     if (v.length < 8) return false;
-    final rUpper = RegExp(r'[A-Z]');
-    final rLower = RegExp(r'[a-z]');
-    final rNum = RegExp(r'\d');
-    final rSym = RegExp(r'[^\w\s]');
-    return rUpper.hasMatch(v) &&
-        rLower.hasMatch(v) &&
-        rNum.hasMatch(v) &&
-        rSym.hasMatch(v);
+    return RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^\w\s]).+$').hasMatch(v);
   }
 
+  bool _isHospitalNameValid(String v) {
+    return v.trim().length >= 3 &&
+        RegExp(r'^[a-zA-Z0-9\u0621-\u064A ]+$').hasMatch(v);
+  }
+
+  bool _isMOHLicenseValid(String v) {
+    return RegExp(r'^\d{5,8}$').hasMatch(v);
+  }
+
+  bool _isCRValid(String v) {
+    return RegExp(r'^\d{8}$').hasMatch(v);
+  }
+
+  bool _isOmanPhone(String v) {
+    return RegExp(r'^[279]\d{7}$').hasMatch(v);
+  }
+
+  bool _isWebsiteValid(String v) {
+    return v.isEmpty || RegExp(r'^(https?:\/\/)').hasMatch(v);
+  }
+
+  // ================= SUBMIT =================
+
   Future<void> _submit() async {
+    final t = AppLocalizations.of(context)!;
+
     if (!_form.currentState!.validate()) return;
+
+    if (_lat == null || _lng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${t.addressLocation} ${t.required}")),
+      );
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      // 🔹 إنشاء حساب hospitaladmin
+      /// 1️⃣ إنشاء الحساب في Firebase Auth
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -71,57 +114,38 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
       final uid = cred.user!.uid;
 
-      // 🏥 إنشاء مستشفى جديد pending
+      /// 2️⃣ حفظ بيانات المستشفى
       await FS.createHospital(
         name: _name.text.trim(),
         email: _email.text.trim(),
         uid: uid,
+        data: {
+          'licenseNumber': _licenseNo.text.trim(),
+          'crNumber': _crNumber.text.trim(),
+          'phone': _phone.text.trim(),
+          'location': _location.text.trim(),
+          'lat': _lat,
+          'lng': _lng,
+          'website': _website.text.trim(),
+          'approved': false,
+          'createdAt': DateTime.now(),
+        },
       );
 
-      // 👤 إنشاء user مربوط بالمستشفى + approved=false
+      /// 3️⃣ حفظ بيانات المستخدم
       await FS.createUser(uid, {
         'role': 'hospitaladmin',
         'hospitalId': uid,
         'approved': false,
       });
 
-      // 📍 تحديث موقع المستشفى إذا متوفر
-      if (_location.text.trim().isNotEmpty) {
-        await FS.updateHospitalLocation(
-          uid,
-          address: _location.text.trim(),
-          city: null,
-          country: null,
-        );
-      }
-
-      // 📩 تنبيه الهيد أدمن عبر NotifyService
+      /// 4️⃣ إشعار الهيد أدمن
       try {
         await NotifyService.notifyHeadAdmin(_name.text.trim());
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Notification sent to Head Admin successfully.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        debugPrint("✅ HeadAdmin notified about hospital request");
-      } catch (e) {
-        debugPrint("⚠️ NotifyService error notifyHeadAdmin: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⚠️ Failed to notify Head Admin: $e'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
+      } catch (_) {}
 
       if (!mounted) return;
 
-      // ⏳ تحويل المستخدم لصفحة Pending Approval
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.pendingApproval,
@@ -131,8 +155,8 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
       setState(() => _error = e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error: $e'),
-          backgroundColor: Colors.red,
+          content: Text('Error: $e'),
+          backgroundColor: Colors.redAccent,
         ),
       );
     } finally {
@@ -140,8 +164,12 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     }
   }
 
+  // ================= UI =================
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -151,59 +179,123 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Image.asset('assets/logo.png', height: 120),
-                ),
+                Center(child: Image.asset('assets/logo.png', height: 110)),
                 const SizedBox(height: 10),
 
                 Text(
-                  'Register Hospital',
+                  t.registerHospital,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
 
+                const SizedBox(height: 18),
+
+                // NAME
                 AppInput(
                   controller: _name,
-                  label: 'Hospital Name',
-                  hint: 'Enter hospital name',
+                  label: t.hospitalName,
+                  hint: t.enterOfficialHospitalName,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Required' : null,
+                  (v == null || !_isHospitalNameValid(v)) ? t.required : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
+                // LICENSE NO
+                AppInput(
+                  controller: _licenseNo,
+                  label: t.licenseNumber,
+                  hint: t.mohLicenseNumber,
+                  validator: (v) =>
+                  (v == null || !_isMOHLicenseValid(v)) ? t.licenseNumber : null,
+                ),
+                const SizedBox(height: 10),
+
+                // CR NUMBER
+                AppInput(
+                  controller: _crNumber,
+                  label: t.crNumber,
+                  hint: t.enterCrNumber,
+                  validator: (v) =>
+                  (v == null || !_isCRValid(v)) ? t.crNumber : null,
+                ),
+                const SizedBox(height: 10),
+
+                // PHONE
+                AppInput(
+                  controller: _phone,
+                  label: t.phoneNumber,
+                  keyboardType: TextInputType.phone,
+                  validator: (v) =>
+                  (v == null || !_isOmanPhone(v)) ? t.enterValidNumber : null,
+                ),
+                const SizedBox(height: 10),
+
+                // EMAIL
                 AppInput(
                   controller: _email,
-                  label: 'E-mail',
+                  label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? 'Valid email required' : null,
+                  (v == null || !v.contains('@')) ? t.validEmailRequired : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
+                // PASSWORD
                 PasswordInput(
                   controller: _pass,
-                  label: 'Password',
-                  validator: (v) => (v != null && _isStrong(v))
-                      ? null
-                      : 'Min 8 chars, must include upper/lower/number/symbol',
+                  label: t.password,
+                  validator: (v) =>
+                  (v != null && _isStrong(v)) ? null : t.passwordRulesFull,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
+                // CONFIRM PASSWORD
                 PasswordInput(
                   controller: _confirmPass,
-                  label: 'Confirm Password',
+                  label: t.confirmPassword,
                   validator: (v) =>
-                  (v == _pass.text) ? null : 'Passwords do not match',
+                  (v == _pass.text) ? null : t.passwordsDoNotMatch,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
+                // LOCATION
+                GestureDetector(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MapPickerScreen(),
+                      ),
+                    );
+
+                    if (result != null) {
+                      setState(() {
+                        _location.text = result["address"];
+                        _lat = result["lat"];
+                        _lng = result["lng"];
+                      });
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: AppInput(
+                      controller: _location,
+                      label: t.addressLocation,
+                      hint: t.pickFromMap,
+                      validator: (v) =>
+                      (v == null || v.isEmpty) ? t.required : null,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // WEBSITE
                 AppInput(
-                  controller: _location,
-                  label: 'Location',
-                  hint: 'Enter hospital address or location',
+                  controller: _website,
+                  label: t.websiteOptional,
+                  hint: 'https://example.com',
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Required' : null,
+                  _isWebsiteValid(v ?? '') ? null : "Invalid URL",
                 ),
 
                 const SizedBox(height: 18),
@@ -220,23 +312,23 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: _loading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Sign up'),
+                        : Text(t.signUp),
                   ),
                 ),
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 18),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Already have an account? '),
+                    Text(t.alreadyHaveAccount),
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(
-                          context, AppRoutes.login),
-                      child: const Text('Login'),
+                      onPressed: () =>
+                          Navigator.pushReplacementNamed(context, AppRoutes.login),
+                      child: Text(t.login),
                     ),
                   ],
                 ),

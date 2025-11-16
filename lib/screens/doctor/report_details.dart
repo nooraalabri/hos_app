@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../l10n/app_localizations.dart';
 
 class ReportDetails extends StatelessWidget {
   final Map<String, dynamic> reportData;
@@ -13,6 +14,8 @@ class ReportDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final Timestamp? ts = reportData['createdAt'];
     final String date = ts != null
         ? "${ts.toDate().year}-${ts.toDate().month.toString().padLeft(2, '0')}-${ts.toDate().day.toString().padLeft(2, '0')}"
@@ -20,9 +23,9 @@ class ReportDetails extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Report Details",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          t.reportDetails,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF2D515C),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -47,24 +50,24 @@ class ReportDetails extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _title("Report Date"),
+                _title(t.reportDate),
                 _value(date),
                 const SizedBox(height: 12),
 
-                _title("General Report"),
+                _title(t.generalReport),
                 _value(reportData['report'] ?? '—'),
                 const SizedBox(height: 12),
 
-                _title("Chronic Diseases"),
+                _title(t.chronicDiseases),
                 _value(_formatList(reportData['chronic'])),
                 const SizedBox(height: 12),
 
-                _title("Allergies"),
+                _title(t.allergies),
                 _value(reportData['allergies'] ?? '—'),
                 const SizedBox(height: 12),
 
-                _title("Medications"),
-                _medList(context),
+                _title(t.medications),
+                _medList(context, t),
               ],
             ),
           ),
@@ -73,7 +76,6 @@ class ReportDetails extends StatelessWidget {
     );
   }
 
-  // ===== تنسيق العناوين =====
   Widget _title(String text) {
     return Text(
       text,
@@ -85,7 +87,6 @@ class ReportDetails extends StatelessWidget {
     );
   }
 
-  // ===== تنسيق النصوص =====
   Widget _value(String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -102,8 +103,7 @@ class ReportDetails extends StatelessWidget {
     return data.toString();
   }
 
-  // ===== عرض الأدوية =====
-  Widget _medList(BuildContext context) {
+  Widget _medList(BuildContext context, AppLocalizations t) {
     final meds = reportData['medicationsList'] ?? [];
     if (meds.isEmpty) return const Text('—', style: TextStyle(fontSize: 15));
 
@@ -119,16 +119,11 @@ class ReportDetails extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "• ${m['name'] ?? ''}",
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-              Text("Dosage: ${m['dosage'] ?? ''}"),
-              Text("Days: ${m['days'] ?? ''}"),
-              Text("Notes: ${m['notes'] ?? ''}"),
+              Text("• ${m['name'] ?? ''}",
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              Text("${t.dosage}: ${m['dosage'] ?? ''}"),
+              Text("${t.days}: ${m['days'] ?? ''}"),
+              Text("${t.notes}: ${m['notes'] ?? ''}"),
             ],
           ),
         );

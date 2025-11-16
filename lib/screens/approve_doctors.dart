@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../l10n/app_localizations.dart';
 import '../services/firestore_service.dart';
 import '../services/notify_service.dart';
 
@@ -8,6 +9,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return FutureBuilder<Map<String, dynamic>?>(
@@ -20,9 +22,9 @@ class ApproveDoctorsScreen extends StatelessWidget {
         }
 
         if (!snap.hasData || snap.data == null) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: Text("No hospital found for this admin"),
+              child: Text(t.no_data),
             ),
           );
         }
@@ -31,7 +33,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Doctor Approval Requests"),
+            title: Text(t.doctor_approval_requests),
             centerTitle: true,
           ),
           body: StreamBuilder(
@@ -44,10 +46,10 @@ class ApproveDoctorsScreen extends StatelessWidget {
                 return Center(child: Text("Error: ${snap.error}"));
               }
               if (!snap.hasData || snap.data!.docs.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    "No pending doctor requests",
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                    t.no_pending_doctors,
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                 );
               }
@@ -60,7 +62,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
                 itemBuilder: (ctx, i) {
                   final d = docs[i].data();
                   final doctorId = docs[i].id;
-                  final name = d['name'] ?? 'Unknown Doctor';
+                  final name = d['name'] ?? t.unknown;
                   final email = d['email'] ?? '';
 
                   return Card(
@@ -93,31 +95,26 @@ class ApproveDoctorsScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              //  زر الـ Approve
+                              // APPROVE
                               ElevatedButton(
                                 onPressed: () async {
                                   await FS.decideDoctor(
-                                      doctorUid: doctorId, approve: true);
+                                    doctorUid: doctorId,
+                                    approve: true,
+                                  );
 
-                                  //  إرسال إيميل للدكتور بعد الموافقة
+                                  // Email
                                   await NotifyService.sendEmail(
                                     to: email,
-                                    subject: 'Doctor Account Approved',
-                                    text: '''
-Dear Dr. $name,
-
-Your registration request has been approved by the hospital administration.
-You can now log in to your account and start using the system.
-
-Best regards,
-Hospital Administration
-''',
+                                    subject: t.approved_email_subject,
+                                    text:
+                                    "${t.approved_email_text}\n\n${t.hospital_admin}",
                                   );
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                          'Doctor "$name" has been APPROVED and notified by email.'),
+                                          '${t.doctor_approved_msg} - $name'),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
@@ -130,9 +127,9 @@ Hospital Administration
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                child: const Text(
-                                  "Accept",
-                                  style: TextStyle(
+                                child: Text(
+                                  t.accept,
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -141,31 +138,23 @@ Hospital Administration
 
                               const SizedBox(width: 12),
 
-                              //  زر الـ Reject
+                              // REJECT
                               ElevatedButton(
                                 onPressed: () async {
                                   await FS.decideDoctor(
                                       doctorUid: doctorId, approve: false);
 
-                                  //  إرسال إيميل رفض
                                   await NotifyService.sendEmail(
                                     to: email,
-                                    subject: 'Doctor Account Rejected',
-                                    text: '''
-Dear Dr. $name,
-
-We regret to inform you that your registration request has been rejected.
-If you believe this was a mistake, please contact the hospital administration.
-
-Best regards,
-Hospital Administration
-''',
+                                    subject: t.rejected_email_subject,
+                                    text:
+                                    "${t.rejected_email_text}\n\n${t.hospital_admin}",
                                   );
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                          'Doctor "$name" has been REJECTED and notified by email.'),
+                                          '${t.doctor_rejected_msg} - $name'),
                                       backgroundColor: Colors.redAccent,
                                     ),
                                   );
@@ -178,9 +167,9 @@ Hospital Administration
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                child: const Text(
-                                  "Reject",
-                                  style: TextStyle(
+                                child: Text(
+                                  t.reject,
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),

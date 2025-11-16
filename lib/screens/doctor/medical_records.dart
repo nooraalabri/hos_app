@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../l10n/app_localizations.dart';
 
 class MedicalRecord extends StatefulWidget {
   final String patientId;
@@ -61,6 +62,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
   }
 
   Future<void> _saveUpdates() async {
+    final t = AppLocalizations.of(context)!;
+
     setState(() => _saving = true);
     try {
       await _db.collection('users').doc(widget.patientId).set({
@@ -88,7 +91,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Medical record updated successfully')),
+          SnackBar(content: Text(t.medicalRecordUpdated)),
         );
         setState(() {
           _editing = false;
@@ -98,7 +101,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+          .showSnackBar(SnackBar(content: Text("${t.error} $e")));
     } finally {
       setState(() => _saving = false);
     }
@@ -116,13 +119,15 @@ class _MedicalRecordState extends State<MedicalRecord> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE8F2F3),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2D515C),
-        title: const Text(
-          'Medical Record',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          t.medicalRecord,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -133,21 +138,21 @@ class _MedicalRecordState extends State<MedicalRecord> {
           : ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildPatientInfo(),
+          _buildPatientInfo(t),
           const SizedBox(height: 16),
-          _buildMedicalSection(),
+          _buildMedicalSection(t),
           const SizedBox(height: 16),
-          _buildMedicinesSection(),
+          _buildMedicinesSection(t),
           const SizedBox(height: 16),
-          _buildReportsSection(),
+          _buildReportsSection(t),
           const SizedBox(height: 30),
-          _buildUpdateButton(),
+          _buildUpdateButton(t),
         ],
       ),
     );
   }
 
-  Widget _buildPatientInfo() {
+  Widget _buildPatientInfo(AppLocalizations t) {
     return Card(
       color: const Color(0xFF2D515C),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -156,10 +161,10 @@ class _MedicalRecordState extends State<MedicalRecord> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _infoRow('Name', _patient?['name'] ?? '-'),
-            _infoRow('Date of Birth', _patient?['dob'] ?? '-'),
-            _infoRow('Phone', _patient?['phone'] ?? '-'),
-            _infoRow('Blood Type', _patient?['bloodType'] ?? '-'),
+            _infoRow(t.name, _patient?['name'] ?? '-'),
+            _infoRow(t.dob, _patient?['dob'] ?? '-'),
+            _infoRow(t.phone, _patient?['phone'] ?? '-'),
+            _infoRow(t.bloodType, _patient?['bloodType'] ?? '-'),
           ],
         ),
       ),
@@ -190,7 +195,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _buildMedicalSection() {
+  Widget _buildMedicalSection(AppLocalizations t) {
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -199,9 +204,9 @@ class _MedicalRecordState extends State<MedicalRecord> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Medical Information',
-              style: TextStyle(
+            Text(
+              t.medicalInfo,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2D515C),
                 fontSize: 16,
@@ -211,18 +216,18 @@ class _MedicalRecordState extends State<MedicalRecord> {
             TextFormField(
               controller: _chronic,
               readOnly: !_editing,
-              decoration: const InputDecoration(
-                labelText: 'Chronic Diseases',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: t.chronicDiseases,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _allergies,
               readOnly: !_editing,
-              decoration: const InputDecoration(
-                labelText: 'Allergies',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: t.allergies,
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -231,7 +236,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _buildMedicinesSection() {
+  Widget _buildMedicinesSection(AppLocalizations t) {
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -240,9 +245,9 @@ class _MedicalRecordState extends State<MedicalRecord> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Medicines',
-              style: TextStyle(
+            Text(
+              t.medicines,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2D515C),
                 fontSize: 16,
@@ -250,24 +255,24 @@ class _MedicalRecordState extends State<MedicalRecord> {
             ),
             const SizedBox(height: 10),
             if (_existingMeds.isEmpty)
-              const Text('No medicines found.',
-                  style: TextStyle(color: Colors.black54))
+              Text(t.noMedicines,
+                  style: const TextStyle(color: Colors.black54))
             else
               ..._existingMeds.map((m) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(m['name'] ?? '-'),
                 subtitle: Text(
-                    'Dosage: ${m['dosage'] ?? '-'} • Days: ${m['days'] ?? '-'}'),
+                    "${t.medicines}: ${m['dosage'] ?? '-'} • ${t.time}: ${m['days'] ?? '-'}"),
               )),
             if (_editing) ...[
               const SizedBox(height: 10),
-              ..._medicines.map((m) => _medicineRow(m)).toList(),
+              ..._medicines.map((m) => _medicineRow(t, m)).toList(),
               TextButton.icon(
                 onPressed: _addMedicineRow,
                 icon: const Icon(Icons.add, color: Color(0xFF2D515C)),
-                label: const Text(
-                  'Add Medicine',
-                  style: TextStyle(color: Color(0xFF2D515C)),
+                label: Text(
+                  t.addMedicine,
+                  style: const TextStyle(color: Color(0xFF2D515C)),
                 ),
               ),
             ],
@@ -277,7 +282,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _medicineRow(Map<String, TextEditingController> med) {
+  Widget _medicineRow(AppLocalizations t, Map<String, TextEditingController> med) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -286,7 +291,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
             flex: 3,
             child: TextFormField(
               controller: med['name'],
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(labelText: t.name),
             ),
           ),
           const SizedBox(width: 8),
@@ -294,7 +299,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
             flex: 2,
             child: TextFormField(
               controller: med['dosage'],
-              decoration: const InputDecoration(labelText: 'Dosage'),
+              decoration: InputDecoration(labelText: t.time),
             ),
           ),
           const SizedBox(width: 8),
@@ -302,7 +307,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
             flex: 1,
             child: TextFormField(
               controller: med['days'],
-              decoration: const InputDecoration(labelText: 'Days'),
+              decoration: InputDecoration(labelText: t.date),
             ),
           ),
         ],
@@ -310,7 +315,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _buildReportsSection() {
+  Widget _buildReportsSection(AppLocalizations t) {
     return StreamBuilder<QuerySnapshot>(
       stream: _db
           .collection('users')
@@ -324,17 +329,17 @@ class _MedicalRecordState extends State<MedicalRecord> {
         }
         final docs = snap.data!.docs;
         if (docs.isEmpty) {
-          return const Text(
-            'No previous reports found.',
-            style: TextStyle(color: Colors.black54),
+          return Text(
+            t.noPreviousReports,
+            style: const TextStyle(color: Colors.black54),
           );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Previous Reports',
-              style: TextStyle(
+            Text(
+              t.previousReports,
+              style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF2D515C),
                   fontSize: 16),
@@ -352,14 +357,14 @@ class _MedicalRecordState extends State<MedicalRecord> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Diagnosis: ${r['diagnosis'] ?? '-'}',
+                      Text('${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
                           style: const TextStyle(
                               color: Colors.white, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text('Notes: ${r['notes'] ?? '-'}',
+                      Text('${t.notes}: ${r['notes'] ?? '-'}',
                           style: const TextStyle(color: Colors.white70)),
                       const SizedBox(height: 4),
-                      Text('Hospital: ${r['hospitalName'] ?? '-'}',
+                      Text('${t.hospital}: ${r['hospitalName'] ?? '-'}',
                           style: const TextStyle(color: Colors.white70)),
                     ],
                   ),
@@ -372,7 +377,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _buildUpdateButton() {
+  Widget _buildUpdateButton(AppLocalizations t) {
     return Center(
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -400,7 +405,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
           ),
         )
             : Text(
-          _editing ? 'Save Changes' : 'Update Medical Record',
+          _editing ? t.saveChanges : t.updateMedicalRecord,
           style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
       ),

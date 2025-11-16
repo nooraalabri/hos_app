@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../l10n/app_localizations.dart';
+
+import '../routes.dart';
 import '../screens/doctor/reviews.dart';
 import '../screens/settings_screen.dart';
 import 'ui.dart';
@@ -38,6 +41,8 @@ class PatientDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Drawer(
       child: SafeArea(
         child: ListView(
@@ -50,10 +55,10 @@ class PatientDrawer extends StatelessWidget {
               child: Icon(Icons.person, color: Colors.white, size: 32),
             ),
             const SizedBox(height: 8),
-            const Center(
+            Center(
               child: Text(
-                'Patient',
-                style: TextStyle(
+                t.patient,
+                style: const TextStyle(
                   color: Color(0xFF5F7E86),
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -62,36 +67,57 @@ class PatientDrawer extends StatelessWidget {
             ),
             const Divider(),
 
-            //  روابط الصفحات
-            _item(context,
-                icon: Icons.person_outline,
-                text: 'My profile',
-              route: ProfilePage.route,),
-            _item(context,
-                icon: Icons.search, text: 'Search', route: SearchPage.route),
-            _item(context,
-                icon: Icons.event,
-                text: 'My appointments',
-                route: AppointmentPage.route),
-            _item(context,
-                icon: Icons.description_outlined,
-                text: 'Medical reports',
-                route: MedicalReportsPage.route),
-            _item(context,
-                icon: Icons.medication_outlined,
-                text: 'My medicines',
-                route: MedicinesPage.route),
-            _item(context,
-                icon: Icons.settings_outlined,
-                text: 'Settings',
-                route: SettingsScreen.route),
+            //  ← هنا التصحيح الحقيقي
+            _item(
+              context,
+              icon: Icons.person_outline,
+              text: t.myProfile,
+              route: AppRoutes.patientProfile,
+
+            ),
+
+            _item(
+              context,
+              icon: Icons.search,
+              text: t.search,
+              route: SearchPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.event,
+              text: t.myAppointments,
+              route: AppointmentPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.description_outlined,
+              text: t.medicalReports,
+              route: MedicalReportsPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.medication_outlined,
+              text: t.myMedicines,
+              route: MedicinesPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.settings_outlined,
+              text: t.settings,
+              route: SettingsScreen.route,
+            ),
 
             const Divider(height: 30),
+
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
+              title: Text(
+                t.logout,
+                style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,
                 ),

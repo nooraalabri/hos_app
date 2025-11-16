@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../routes.dart';
 import '../widgets/admin_drawer.dart';
+import '../l10n/app_localizations.dart';
 
 class HospitalAdminHome extends StatelessWidget {
   const HospitalAdminHome({super.key});
@@ -11,14 +12,15 @@ class HospitalAdminHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    final t = AppLocalizations.of(context)!;
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: FS.hospitalForAdmin(uid),
       builder: (context, snap) {
         final loading = snap.connectionState == ConnectionState.waiting;
         final data = snap.data;
-        final name = (data?['name'] ?? 'Hospital Admin') as String;
-        final status = (data?['status'] ?? 'pending') as String;
+        final name = (data?['name'] ?? t.hospitalAdmin) as String;
+        final status = (data?['status'] ?? t.pending) as String;
 
         return Scaffold(
           drawer: AdminDrawer(hospitalName: name),
@@ -41,7 +43,7 @@ class HospitalAdminHome extends StatelessWidget {
             centerTitle: true,
             actions: [
               IconButton(
-                tooltip: 'Logout',
+                tooltip: t.logout,
                 onPressed: () => AuthService.logoutAndGoWelcome(context),
                 icon: const Icon(Icons.logout, color: Colors.white),
               ),
@@ -60,26 +62,29 @@ class HospitalAdminHome extends StatelessWidget {
               const SizedBox(height: 16),
 
               _HomeTile(
-                title: 'My profile',
-                subtitle: 'Hospital info & about',
+                title: t.myProfile,
+                subtitle: t.hospitalProfileSubtitle,
                 icon: Icons.person_outline,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.hospitalProfile),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.hospitalProfile),
               ),
               const SizedBox(height: 12),
 
               _HomeTile(
-                title: 'My staff',
-                subtitle: 'Manage doctors & details',
+                title: t.myStaff,
+                subtitle: t.myStaffSubtitle,
                 icon: Icons.badge_outlined,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.myStaff),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.myStaff),
               ),
               const SizedBox(height: 12),
 
               _HomeTile(
-                title: 'Reports',
-                subtitle: 'Weekly / Monthly / Yearly',
+                title: t.reports,
+                subtitle: t.reportsOverview,
                 icon: Icons.pie_chart_outline,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.hospitalReports),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.hospitalReports),
               ),
 
               const SizedBox(height: 24),
@@ -87,18 +92,18 @@ class HospitalAdminHome extends StatelessWidget {
           ),
           floatingActionButton: FloatingActionButton.extended(
             backgroundColor: const Color(0xFF2D515C),
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor),
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.addDoctorByAdmin),
             icon: const Icon(Icons.person_add_alt_1, color: Color(0xFFE6EBEC)),
-            label: const Text(
-              'Add doctor',
-              style: TextStyle(
+            label: Text(
+              t.addDoctor,
+              style: const TextStyle(
                 color: Color(0xFFE6EBEC),
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
               ),
             ),
           ),
-
         );
       },
     );

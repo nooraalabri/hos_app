@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hos_app/screens/pending_approval.dart';
+import '../../l10n/app_localizations.dart';
 
+import '../screens/pending_approval.dart';
 import '../patients/patient_home.dart';
 import '../services/firestore_service.dart';
 import 'doctor_home.dart';
@@ -14,9 +15,11 @@ class RoleRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
-      return const Scaffold(body: Center(child: Text('Not logged in')));
+      return Scaffold(body: Center(child: Text(t.notLoggedIn)));
     }
 
     final stream = FS.users.doc(user.uid).snapshots();
@@ -25,10 +28,13 @@ class RoleRouter extends StatelessWidget {
       stream: stream,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
+
         if (!snap.hasData || !snap.data!.exists) {
-          return const Scaffold(body: Center(child: Text('User profile not found')));
+          return Scaffold(body: Center(child: Text(t.profileNotFound)));
         }
 
         final data = snap.data!.data() as Map<String, dynamic>? ?? {};
@@ -37,16 +43,13 @@ class RoleRouter extends StatelessWidget {
 
         switch (role) {
           case 'patient':
-
             return const PatientHome();
 
           case 'doctor':
-
             if (!approved) return const PendingApprovalScreen();
             return DoctorHome(doctorId: user.uid);
 
           case 'hospitaladmin':
-
             if (!approved) return const PendingApprovalScreen();
             return const HospitalAdminHome();
 
@@ -54,7 +57,7 @@ class RoleRouter extends StatelessWidget {
             return const HeadAdminHome();
 
           default:
-            return const Scaffold(body: Center(child: Text('Unknown role')));
+            return Scaffold(body: Center(child: Text(t.unknownRole)));
         }
       },
     );

@@ -10,8 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  crypto: ^3.0.3
-  mocktail: ^1.0.3
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
@@ -26,6 +24,13 @@ dependencies:
   firebase_messaging: ^15.2.10
   shared_preferences: ^2.3.2
   cupertino_icons: ^1.0.8
+  crypto: ^3.0.3
+  mocktail: ^1.0.3
+  google_maps_flutter: ^2.5.0
+  google_maps: ^8.2.0
+  geolocator: ^12.0.0
+  geocoding: ^3.0.0
+
 
 dev_dependencies:
   flutter_test:
@@ -38,8 +43,3 @@ flutter:
   generate: true
   assets:
     - assets/logo.png
-
-l10n:
-  arb-dir: lib/l10n
-  template-arb-file: app_en.arb
-  output-localization-file: app_localizations.dart

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_report_screen.dart';
 
 class MyShiftsScreen extends StatefulWidget {
@@ -15,6 +16,8 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
@@ -23,9 +26,9 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
       backgroundColor: const Color(0xFFE8F2F3),
       appBar: AppBar(
         backgroundColor: const Color(0xFF2D515C),
-        title: const Text(
-          "Today's Appointments",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          t.todaysAppointments,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 4,
@@ -48,17 +51,17 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                "Error: ${snapshot.error}",
+                "${t.error} ${snapshot.error}",
                 style: const TextStyle(color: Colors.red),
               ),
             );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                "No appointments for today",
-                style: TextStyle(
+                t.noAppointments,
+                style: const TextStyle(
                   color: Colors.black54,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -75,8 +78,8 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             itemBuilder: (context, i) {
               final data = appts[i].data() as Map<String, dynamic>;
               final apptId = appts[i].id;
-              final patientName = (data['patientName'] ?? 'Unknown').toString();
-              final hospitalName = (data['hospitalName'] ?? '').toString();
+              final patientName = (data['patientName'] ?? '-').toString();
+              final hospitalName = (data['hospitalName'] ?? '-').toString();
               final ts = data['time'] as Timestamp?;
               final apptDateStr = ts != null ? _formatDate(ts.toDate()) : '—';
               final apptTimeStr = ts != null ? _formatTime(ts.toDate()) : '—';
@@ -96,7 +99,7 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
                         fontSize: 16),
                   ),
                   subtitle: Text(
-                    "Date: $apptDateStr  •  Time: $apptTimeStr\nHospital: $hospitalName",
+                    "${t.date}: $apptDateStr  •  ${t.time}: $apptTimeStr\n${t.hospital}: $hospitalName",
                     style: const TextStyle(color: Colors.white70),
                   ),
                   trailing: ElevatedButton(
@@ -119,10 +122,10 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      "Add / Update Report",
-                      style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    child: Text(
+                      t.addUpdateReport,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                   contentPadding:
@@ -136,14 +139,12 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
     );
   }
 
-  // ======== تنسيق الوقت ========
   String _formatTime(DateTime t) {
     final h = t.hour.toString().padLeft(2, '0');
     final m = t.minute.toString().padLeft(2, '0');
     return "$h:$m";
   }
 
-  // ======== تنسيق التاريخ ========
   String _formatDate(DateTime t) {
     final y = t.year.toString().padLeft(4, '0');
     final mo = t.month.toString().padLeft(2, '0');

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/app_input.dart';
 import '../services/otp_service.dart';
 import '../services/email_api.dart';
@@ -7,6 +8,7 @@ import '../routes.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
+
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
@@ -25,7 +27,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _send() async {
     if (!_form.currentState!.validate()) return;
+
     final email = _email.text.trim();
+    final t = AppLocalizations.of(context)!;
 
     setState(() {
       sending = true;
@@ -36,13 +40,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       await OtpService
           .sendOtp(email: email, emailApiBaseUrl: EmailApiConfig.baseUrl)
           .timeout(const Duration(seconds: 8), onTimeout: () {
-        // لا نرمي خطأ عند انتهاء المهلة – نكمل UX
+        // UX: لا نرمي خطأ حتى لو انتهت المهلة
       });
 
       if (!mounted) return;
+
       Navigator.pushNamed(context, AppRoutes.enterCode, arguments: email);
     } catch (e) {
-      _err = 'Failed to send code. Try again.';
+      _err = t.failedToSend;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_err!)),
@@ -55,6 +60,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -65,16 +72,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-                Text('Forgot\npassword',
-                    style: Theme.of(context).textTheme.headlineMedium),
+
+                // العنوان
+                Text(
+                  t.forgotPasswordTitle,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+
                 const SizedBox(height: 24),
 
+                // حقل الإيميل
                 AppInput(
                   controller: _email,
-                  label: 'E-mail',
+                  label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? 'Enter valid email' : null,
+                  (v == null || !v.contains('@')) ? t.enterValidEmail : null,
                 ),
 
                 const Spacer(),
@@ -82,7 +95,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 if (_err != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(_err!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _err!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
 
                 Center(
@@ -93,10 +109,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           horizontal: 36, vertical: 12),
                       child: sending
                           ? const CircularProgressIndicator()
-                          : const Text('Send'),
+                          : Text(t.send),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 24),
               ],
             ),

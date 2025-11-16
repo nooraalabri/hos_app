@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../routes.dart';
 import '../screens/settings_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class HeadAdminHome extends StatelessWidget {
   const HeadAdminHome({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Head Admin'),
+        title: Text(t.headAdmin),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -30,9 +33,10 @@ class HeadAdminHome extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
 
+            // ✅ Review Hospitals
             _HomeTile(
-              title: 'Review Hospitals',
-              subtitle: 'Accept or Reject new hospital requests',
+              title: t.reviewHospitals,
+              subtitle: t.reviewHospitalsSubtitle,
               icon: Icons.fact_check_outlined,
               onTap: () => Navigator.pushNamed(
                 context,
@@ -42,18 +46,35 @@ class HeadAdminHome extends StatelessWidget {
 
             const SizedBox(height: 12),
 
+            // ✅ Reports
             _HomeTile(
-              title: 'Reports',
-              subtitle: 'Weekly / Monthly / Yearly stats',
-              icon: Icons.pie_chart_outline,
-              onTap: () => Navigator.pushNamed(context, AppRoutes.headAdminReports),
+              title: t.reports,
+              subtitle: t.reportsSubtitle,
+              icon: Icons.bar_chart_outlined,
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.headAdminHospitalDetails,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ✅ Dashboard
+            _HomeTile(
+              title: t.dashboard,
+              subtitle: t.dashboardSubtitle,
+              icon: Icons.dashboard_outlined,
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.headAdminReports,
+              ),
             ),
 
             const Spacer(),
 
             ElevatedButton(
               onPressed: () => AuthService.logoutAndGoWelcome(context),
-              child: const Text('Logout'),
+              child: Text(t.logout),
             ),
           ],
         ),
@@ -95,17 +116,19 @@ class _HomeTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      )),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                      )),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
                 ],
               ),
             ),

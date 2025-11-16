@@ -7,70 +7,87 @@ class FS {
   static final _db = FirebaseFirestore.instance;
 
   // ===== Collections =====
-  static CollectionReference<Map<String, dynamic>> get users => _db.collection('users');
-  static CollectionReference<Map<String, dynamic>> get hospitals => _db.collection('hospitals');
-  static CollectionReference<Map<String, dynamic>> get otps => _db.collection('otps');
-  static CollectionReference<Map<String, dynamic>> get appointments => _db.collection('appointments');
-  static CollectionReference<Map<String, dynamic>> get reviews => _db.collection('reviews');
-  static CollectionReference<Map<String, dynamic>> get reports => _db.collection('reports'); // ✅ أضفنا هذا
+  static CollectionReference<Map<String, dynamic>> get users =>
+      _db.collection('users');
+  static CollectionReference<Map<String, dynamic>> get hospitals =>
+      _db.collection('hospitals');
+  static CollectionReference<Map<String, dynamic>> get otps =>
+      _db.collection('otps');
+  static CollectionReference<Map<String, dynamic>> get appointments =>
+      _db.collection('appointments');
+  static CollectionReference<Map<String, dynamic>> get reviews =>
+      _db.collection('reviews');
+  static CollectionReference<Map<String, dynamic>> get reports =>
+      _db.collection('reports');
 
   // ===== Helpers =====
   static DateTime _dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
-  static DateTime _dayEnd(DateTime d) => _dayStart(d).add(const Duration(days: 1));
-  static DateTime _weekStart(DateTime d) => _dayStart(d).subtract(Duration(days: d.weekday - 1));
-  static DateTime _weekEnd(DateTime d) => _weekStart(d).add(const Duration(days: 7));
+  static DateTime _dayEnd(DateTime d) =>
+      _dayStart(d).add(const Duration(days: 1));
+  static DateTime _weekStart(DateTime d) =>
+      _dayStart(d).subtract(Duration(days: d.weekday - 1));
+  static DateTime _weekEnd(DateTime d) =>
+      _weekStart(d).add(const Duration(days: 7));
   static Timestamp _ts(DateTime d) => Timestamp.fromDate(d);
 
   // ===== Users =====
   static Future<void> createUser(String uid, Map<String, dynamic> data) async {
-    await users.doc(uid).set({
-      ...data,
-      'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await users.doc(uid).set(
+      {
+        ...data,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
   }
 
-  // ===== Hospitals =====
+  // =======================================================================
+  // ======================== H O S P I T A L S =============================
+  // =======================================================================
+
   static Future<void> createHospital({
     required String uid,
     required String name,
     required String email,
-    String? address,
-    String? city,
-    String? country,
+    Map<String, dynamic>? data, // يحتوي: phone, website, licenseNumber, crNumber, location, lat, lng
   }) async {
-    await hospitals.doc(uid).set({
+    final hospitalData = {
       'name': name,
       'email': email,
-      'address': address ?? '',
-      'city': city ?? '',
-      'country': country ?? '',
-      'status': 'pending',
+      'status': 'pending', // new
       'createdAt': FieldValue.serverTimestamp(),
-    });
+      ...?data, // دمج بيانات: phone, website, lat, lng, licenseNumber, crNumber...
+    };
 
-    await users.doc(uid).set({
-      'role': 'hospitaladmin',
-      'hospitalId': uid,
-      'approved': false,
-    }, SetOptions(merge: true));
+    await hospitals.doc(uid).set(hospitalData);
+
+    await users.doc(uid).set(
+      {
+        'role': 'hospitaladmin',
+        'hospitalId': uid,
+        'approved': false,
+      },
+      SetOptions(merge: true),
+    );
   }
 
   static Future<void> updateHospitalLocation(
       String hospitalId, {
         String? address,
-        String? city,
-        String? country,
+        double? lat,
+        double? lng,
       }) {
     final data = <String, dynamic>{
       if (address != null && address.isNotEmpty) 'address': address,
-      if (city != null && city.isNotEmpty) 'city': city,
-      if (country != null && country.isNotEmpty) 'country': country,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
       'updatedAt': FieldValue.serverTimestamp(),
     };
     return hospitals.doc(hospitalId).set(data, SetOptions(merge: true));
   }
 
-  static Future<List<Map<String, dynamic>>> listHospitals({bool onlyApproved = true}) async {
+  static Future<List<Map<String, dynamic>>> listHospitals(
+      {bool onlyApproved = true}) async {
     Query<Map<String, dynamic>> q = hospitals;
     if (onlyApproved) {
       q = q.where('status', isEqualTo: 'approved');
@@ -108,7 +125,10 @@ class FS {
       'approvedAt': FieldValue.serverTimestamp(),
     });
 
-    await users.doc(hospitalId).set({'approved': approve}, SetOptions(merge: true));
+    await users.doc(hospitalId).set(
+      {'approved': approve},
+      SetOptions(merge: true),
+    );
 
     if (hospitalEmail.isNotEmpty) {
       await NotifyService.notifyHospitalDecision(
@@ -119,7 +139,10 @@ class FS {
     }
   }
 
-  // ===== Doctors =====
+  // =======================================================================
+  // ========================= D O C T O R S ===============================
+  // =======================================================================
+
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorsStream(
       String hospitalId, {
         bool? approved,
@@ -127,27 +150,32 @@ class FS {
     Query<Map<String, dynamic>> q = users
         .where('role', isEqualTo: 'doctor')
         .where('hospitalId', isEqualTo: hospitalId);
-    if (approved != null) q = q.where('approved', isEqualTo: approved);
+
+    if (approved != null) {
+      q = q.where('approved', isEqualTo: approved);
+    }
+
     return q.snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> pendingDoctorsStream(String hospitalId) =>
+  static Stream<QuerySnapshot<Map<String, dynamic>>> pendingDoctorsStream(
+      String hospitalId) =>
       doctorsStream(hospitalId, approved: false);
 
   static Future<void> decideDoctor({
     required String doctorUid,
     required bool approve,
   }) async {
-    final userRef = users.doc(doctorUid);
-    final userSnap = await userRef.get();
-    if (!userSnap.exists) return;
+    final ref = users.doc(doctorUid);
+    final snap = await ref.get();
+    if (!snap.exists) return;
 
-    final data = userSnap.data()!;
+    final data = snap.data()!;
     final doctorEmail = (data['email'] ?? '').toString();
     final doctorName = (data['name'] ?? '').toString();
     final hospitalName = (data['hospitalName'] ?? '').toString();
 
-    await userRef.set({'approved': approve}, SetOptions(merge: true));
+    await ref.set({'approved': approve}, SetOptions(merge: true));
 
     if (doctorEmail.isNotEmpty) {
       await NotifyService.notifyDoctorDecision(
@@ -163,9 +191,17 @@ class FS {
     await users.doc(doctorUid).delete();
   }
 
-  // ===== OTP =====
-  static Future<void> saveOtp(String email, String code, {Duration ttl = const Duration(minutes: 10)}) async {
+  // =======================================================================
+  // ============================ OTP ======================================
+  // =======================================================================
+
+  static Future<void> saveOtp(
+      String email,
+      String code, {
+        Duration ttl = const Duration(minutes: 10),
+      }) async {
     final expiresAt = Timestamp.fromDate(DateTime.now().add(ttl));
+
     await otps.doc(email).set({
       'code': code,
       'expiresAt': expiresAt,
@@ -176,15 +212,28 @@ class FS {
   static Future<bool> verifyOtp(String email, String code) async {
     final doc = await otps.doc(email).get();
     if (!doc.exists) return false;
+
     final data = doc.data()!;
     final ts = data['expiresAt'];
-    final expiresAt = ts is Timestamp ? ts.toDate() : DateTime.tryParse(ts.toString());
-    final ok = data['code'] == code && (expiresAt?.isAfter(DateTime.now()) ?? false);
-    if (ok) await otps.doc(email).delete();
+
+    final expiresAt = ts is Timestamp
+        ? ts.toDate()
+        : DateTime.tryParse(ts.toString());
+
+    final ok = data['code'] == code &&
+        (expiresAt?.isAfter(DateTime.now()) ?? false);
+
+    if (ok) {
+      await otps.doc(email).delete();
+    }
+
     return ok;
   }
 
-  // ===== Medical Reports =====
+  // =======================================================================
+  // ======================= MEDICAL REPORTS ================================
+  // =======================================================================
+
   static Future<void> addMedicalReport(
       String appointmentId,
       String report,
@@ -197,20 +246,19 @@ class FS {
     final patientId = (appt['patientId'] ?? '').toString();
     if (patientId.isEmpty) return;
 
-    String doctorName = (appt['doctorName'] ?? appt['doctorId'] ?? '').toString();
+    String doctorName =
+    (appt['doctorName'] ?? appt['doctorId'] ?? '').toString();
     String hospitalName = (appt['hospitalName'] ?? '').toString();
     final hospitalId = (appt['hospitalId'] ?? '').toString();
 
     if (hospitalName.isEmpty && hospitalId.isNotEmpty) {
-      try {
-        final h = await hospitals.doc(hospitalId).get();
-        if (h.exists) {
-          hospitalName = (h.data()!['name'] ?? '').toString();
-        }
-      } catch (_) {}
+      final h = await hospitals.doc(hospitalId).get();
+      if (h.exists) {
+        hospitalName = (h.data()!['name'] ?? '').toString();
+      }
     }
 
-    final nowServerTs = FieldValue.serverTimestamp();
+    final nowTs = FieldValue.serverTimestamp();
     final batch = _db.batch();
 
     final apptRef = appointments.doc(appointmentId);
@@ -218,10 +266,12 @@ class FS {
       'report': report,
       'medicines': medicines,
       'status': 'completed',
-      'updatedAt': nowServerTs,
+      'updatedAt': nowTs,
     });
 
-    final patientApptRef = users.doc(patientId).collection('appointments').doc(appointmentId);
+    final patientApptRef =
+    users.doc(patientId).collection('appointments').doc(appointmentId);
+
     batch.set(
       patientApptRef,
       {
@@ -230,12 +280,11 @@ class FS {
         'status': 'completed',
         'doctorName': doctorName,
         'hospitalName': hospitalName,
-        'updatedAt': nowServerTs,
+        'updatedAt': nowTs,
       },
       SetOptions(merge: true),
     );
 
-    //  تعديل بسيط: حفظ التقرير في مكانين
     final reportData = {
       'appointmentId': appointmentId,
       'doctorName': doctorName,
@@ -244,102 +293,105 @@ class FS {
       'diagnosis': report,
       'notes': medicines,
       'patientId': patientId,
-      'createdAt': nowServerTs,
+      'createdAt': nowTs,
     };
 
-    final patientReportRef = users.doc(patientId).collection('reports').doc();
+    final patientReportRef =
+    users.doc(patientId).collection('reports').doc();
+
     final globalReportRef = reports.doc();
+
     batch.set(patientReportRef, reportData);
     batch.set(globalReportRef, reportData);
 
     await batch.commit();
   }
 
-  // ===== باقي الكود =====
-  static Future<Map<String, int>> statsForHospital(String hospitalId, String period) async {
+  // =======================================================================
+  // ====================== HOSPITAL STATS =================================
+  // =======================================================================
+
+  static Future<Map<String, int>> statsForHospital(
+      String hospitalId,
+      String periodKey,
+      ) async {
     final now = DateTime.now();
-    DateTime from;
-    switch (period) {
+    late DateTime start, end;
+
+    switch (periodKey) {
       case 'weekly':
-        from = now.subtract(const Duration(days: 7));
+        start = _weekStart(now);
+        end = _weekEnd(now);
         break;
       case 'monthly':
-        from = DateTime(now.year, now.month == 1 ? 12 : now.month - 1, now.day);
+        start = DateTime(now.year, now.month, 1);
+        end = DateTime(now.year, now.month + 1, 1);
         break;
       case 'yearly':
+        start = DateTime(now.year, 1, 1);
+        end = DateTime(now.year + 1, 1, 1);
+        break;
       default:
-        from = DateTime(now.year - 1, now.month, now.day);
+        start = _weekStart(now);
+        end = _weekEnd(now);
     }
 
-    final fromTs = _ts(from);
-    int newRegs = 0;
-    int appts = 0;
-    int visits = 0;
+    final q = appointments
+        .where('hospitalId', isEqualTo: hospitalId)
+        .where('time', isGreaterThanOrEqualTo: start)
+        .where('time', isLessThan: end)
+        .where('status', whereIn: [
+      'booked',
+      'checked_in',
+      'completed',
+    ]);
 
-    try {
-      final u = await users
-          .where('role', isEqualTo: 'patient')
-          .where('createdAt', isGreaterThanOrEqualTo: fromTs)
-          .get();
-      newRegs = u.size;
-    } catch (_) {}
+    final snap = await q.get();
+    final items = snap.docs;
 
-    try {
-      String? hospName;
-      try {
-        final hospDoc = await hospitals.doc(hospitalId).get();
-        hospName = (hospDoc.data()?['name'] ?? '').toString();
-      } catch (_) {}
+    final int appointmentsCount = items.length;
+    final int visitsCount =
+        items.where((d) => d['status'] == 'completed').length;
 
-      final all = await appointments.where('createdAt', isGreaterThanOrEqualTo: fromTs).get();
+    final int uniquePatients = items
+        .map((d) => d['patientId'])
+        .whereType<String>()
+        .toSet()
+        .length;
 
-      for (final doc in all.docs) {
-        final data = doc.data();
-        if ((data['hospitalId'] == hospitalId) ||
-            (hospName != null && hospName.isNotEmpty && data['hospitalName'] == hospName)) {
-          appts++;
-          if (data['status'] == 'completed') visits++;
-        }
-      }
-    } catch (_) {}
-
-    try {
-      final pats = await users.where('role', isEqualTo: 'patient').get();
-      for (final u in pats.docs) {
-        final subs = await u.reference
-            .collection('appointments')
-            .where('createdAt', isGreaterThanOrEqualTo: fromTs)
-            .get();
-        for (final s in subs.docs) {
-          final data = s.data();
-          if ((data['hospitalId'] == hospitalId) ||
-              (data['hospitalName'] != null && data['hospitalName'].toString().isNotEmpty)) {
-            appts++;
-            if (data['status'] == 'completed') visits++;
-          }
-        }
-      }
-    } catch (_) {}
-
-    if (visits == 0 && appts > 0) visits = appts;
-
-    return {'new': newRegs, 'appointments': appts, 'visits': visits};
+    return {
+      'new': uniquePatients,
+      'appointments': appointmentsCount,
+      'visits': visitsCount,
+    };
   }
 
-  static Future<Map<String, int>> statsForHeadAdmin({required ReportPeriod period}) async {
+  // =======================================================================
+  // ==================== HEAD ADMIN STATS =================================
+  // =======================================================================
+
+  static Future<Map<String, int>> statsForHeadAdmin({
+    required ReportPeriod period,
+  }) async {
     final now = DateTime.now();
     late DateTime from;
+
     switch (period) {
       case ReportPeriod.weekly:
         from = now.subtract(const Duration(days: 7));
         break;
       case ReportPeriod.monthly:
-        from = DateTime(now.year, now.month == 1 ? 12 : now.month - 1, now.day);
+        from = DateTime(
+          now.year,
+          now.month == 1 ? 12 : now.month - 1,
+          now.day,
+        );
         break;
       case ReportPeriod.yearly:
         from = DateTime(now.year - 1, now.month, now.day);
         break;
     }
+
     final to = now;
 
     Future<int> _count(Query q) async {
@@ -347,30 +399,57 @@ class FS {
       return s.size;
     }
 
-    final hospitalsApprovedF = _count(hospitals.where('status', isEqualTo: 'approved'));
-    final hospitalsPendingF = _count(hospitals.where('status', isEqualTo: 'pending'));
-    final doctorsApprovedF =
-    _count(users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: true));
-    final doctorsPendingF =
-    _count(users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: false));
+    final hospitalsApprovedF =
+    _count(hospitals.where('status', isEqualTo: 'approved'));
+
+    final hospitalsPendingF =
+    _count(hospitals.where('status', isEqualTo: 'pending'));
+
+    final doctorsApprovedF = _count(
+      users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: true),
+    );
+
+    final doctorsPendingF = _count(
+      users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: false),
+    );
+
     final patientsTotalF = _count(users.where('role', isEqualTo: 'patient'));
+
     final newUsersF = _count(
       users
           .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
           .where('createdAt', isLessThan: _ts(to)),
     );
+
     final newHospitalsF = _count(
       hospitals
           .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
           .where('createdAt', isLessThan: _ts(to)),
     );
+
     final apptsF = _count(
       appointments
           .where('createdAt', isGreaterThanOrEqualTo: _ts(from))
           .where('createdAt', isLessThan: _ts(to)),
     );
 
-    final r = await Future.wait<int>([
+    final hospitalsSnap =
+    await hospitals.where('status', isEqualTo: 'approved').get();
+
+    int totalLinkedPatients = 0;
+
+    for (final h in hospitalsSnap.docs) {
+      final id = h.id;
+
+      final pats = await users
+          .where('role', isEqualTo: 'patient')
+          .where('hospitalId', isEqualTo: id)
+          .get();
+
+      totalLinkedPatients += pats.size;
+    }
+
+    final r = await Future.wait([
       hospitalsApprovedF,
       hospitalsPendingF,
       doctorsApprovedF,
@@ -390,16 +469,23 @@ class FS {
       'newUsers': r[5],
       'newHospitals': r[6],
       'appointments': r[7],
+      'linkedPatients': totalLinkedPatients,
     };
   }
 
-  // ===== Doctor Reviews =====
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorReviews(String doctorId) {
+  // =======================================================================
+  // ======================== REVIEWS & SHIFTS ==============================
+  // =======================================================================
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorReviews(
+      String doctorId,
+      ) {
     return reviews.where('doctorId', isEqualTo: doctorId).snapshots();
   }
 
-  // ===== Doctor Shifts =====
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsDaily(String doctorId) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsDaily(
+      String doctorId,
+      ) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 1));
@@ -413,7 +499,9 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsWeekly(String doctorId) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsWeekly(
+      String doctorId,
+      ) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 7));
@@ -427,7 +515,9 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsMonthly(String doctorId) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsMonthly(
+      String doctorId,
+      ) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 30));
@@ -441,8 +531,11 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> hospitalUpcomingShifts(String hospitalId) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> hospitalUpcomingShifts(
+      String hospitalId,
+      ) {
     final todayStart = _ts(_dayStart(DateTime.now()));
+
     return hospitals
         .doc(hospitalId)
         .collection('shifts')
@@ -451,7 +544,10 @@ class FS {
         .snapshots();
   }
 
-  // ===== Patients =====
+  // =======================================================================
+  // ========================= PATIENTS ====================================
+  // =======================================================================
+
   static Future<Map<String, dynamic>?> getPatientProfile(String uid) async {
     final doc = await users.doc(uid).get();
     if (!doc.exists) return null;
@@ -459,10 +555,16 @@ class FS {
   }
 
   static Future<void> updateChronic(String uid, List<String> chronic) async {
-    await users.doc(uid).set({'chronic': chronic}, SetOptions(merge: true));
+    await users.doc(uid).set(
+      {'chronic': chronic},
+      SetOptions(merge: true),
+    );
   }
 
-  static Future<String> createAppointment(String uid, Map<String, dynamic> data) async {
+  static Future<String> createAppointment(
+      String uid,
+      Map<String, dynamic> data,
+      ) async {
     if (!data.containsKey('shiftId') ||
         data['shiftId'] == null ||
         data['shiftId'].toString().isEmpty) {
@@ -475,17 +577,21 @@ class FS {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    await users.doc(uid).collection('appointments').doc(rootRef.id).set({
-      ...data,
-      'appointmentId': rootRef.id,
-      'patientId': uid,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await users.doc(uid).collection('appointments').doc(rootRef.id).set(
+      {
+        ...data,
+        'appointmentId': rootRef.id,
+        'patientId': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
 
     return rootRef.id;
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> patientAppointments(String uid) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientAppointments(
+      String uid,
+      ) {
     return users
         .doc(uid)
         .collection('appointments')
@@ -493,7 +599,9 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> patientReports(String uid) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientReports(
+      String uid,
+      ) {
     return users
         .doc(uid)
         .collection('reports')
@@ -501,15 +609,27 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> patientMedicines(String uid,
-      {bool activeOnly = false}) {
-    Query<Map<String, dynamic>> q = users.doc(uid).collection('medicines');
-    if (activeOnly) q = q.where('active', isEqualTo: true);
+  static Stream<QuerySnapshot<Map<String, dynamic>>> patientMedicines(
+      String uid, {
+        bool activeOnly = false,
+      }) {
+    Query<Map<String, dynamic>> q =
+    users.doc(uid).collection('medicines');
+
+    if (activeOnly) {
+      q = q.where('active', isEqualTo: true);
+    }
+
     return q.orderBy('createdAt', descending: true).snapshots();
   }
 
-  // ===== Search =====
-  static Stream<QuerySnapshot<Map<String, dynamic>>> searchHospitals(String query) {
+  // =======================================================================
+  // ========================== SEARCH =====================================
+  // =======================================================================
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> searchHospitals(
+      String query,
+      ) {
     return hospitals
         .where('status', isEqualTo: 'approved')
         .orderBy('name')
@@ -518,7 +638,9 @@ class FS {
         .snapshots();
   }
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> searchDoctors(String query) {
+  static Stream<QuerySnapshot<Map<String, dynamic>>> searchDoctors(
+      String query,
+      ) {
     return users
         .where('role', isEqualTo: 'doctor')
         .orderBy('name')
@@ -528,7 +650,7 @@ class FS {
   }
 }
 
-// ====== Testing Accessors (for automated tests only) ======
+// ===== Testing Accessors =====
 extension FSTestAccess on FS {
   static DateTime dayStart(DateTime d) => FS._dayStart(d);
   static DateTime weekStart(DateTime d) => FS._weekStart(d);
