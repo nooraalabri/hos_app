@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
-import '../../l10n/app_localizations.dart'; // ✅ استيراد الترجمة
+import '../../l10n/app_localizations.dart';
 
 class HospitalDoctorReportsScreen extends StatefulWidget {
   static const route = '/hospital/doctor-reports';
@@ -23,6 +23,7 @@ class _HospitalDoctorReportsScreenState
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
+
     FS.hospitalForAdmin(uid).then((d) {
       setState(() => hospId = d?['id']);
     });
@@ -30,11 +31,17 @@ class _HospitalDoctorReportsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!; // ✅ المتغير المختصر للترجمة
+    final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.doctor_profile)), // ✅ Doctor Reports → ملف الطبيب
+      appBar: AppBar(
+        title: Text(t.doctor_profile),
+        backgroundColor: cs.surface,
+        foregroundColor: cs.onSurface,
+      ),
       drawer: const AdminDrawer(),
+
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -47,18 +54,21 @@ class _HospitalDoctorReportsScreenState
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return Center(child: Text(t.no_data)); // ✅ No doctors found → لا توجد بيانات
+            return Center(child: Text(t.no_data));
           }
 
           final doctors = snap.data!.docs
               .map((d) => {'id': d.id, ...d.data()})
-              .where((r) =>
-          _search == null ||
-              (r['name'] ?? '')
-                  .toString()
-                  .toLowerCase()
-                  .contains(_search!.toLowerCase()))
+              .where(
+                (r) =>
+            _search == null ||
+                (r['name'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(_search!.toLowerCase()),
+          )
               .toList();
 
           return Padding(
@@ -69,30 +79,33 @@ class _HospitalDoctorReportsScreenState
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: t.search_doctor, // ✅ "Search by doctor name"
+                    hintText: t.search_doctor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    fillColor: cs.surface.withValues(alpha: 0.2),
                   ),
-                  onChanged: (v) => setState(
-                          () => _search = v.trim().isEmpty ? null : v.trim()),
+                  onChanged: (v) => setState(() {
+                    _search = v.trim().isEmpty ? null : v.trim();
+                  }),
                 ),
+
                 const SizedBox(height: 16),
 
-                // 🩺 List of Doctors
+                // 🩺 Doctors List
                 Expanded(
                   child: ListView.builder(
                     itemCount: doctors.length,
                     itemBuilder: (ctx, i) {
                       final d = doctors[i];
+
+                      final doctorId = d['id'];
                       final name = d['name'] ?? t.unknown;
                       final email = d['email'] ?? '';
                       final specialization =
                           d['specialization'] ?? '—';
-                      final doctorId = d['id'];
 
                       return FutureBuilder<
                           QuerySnapshot<Map<String, dynamic>>>(
@@ -101,17 +114,23 @@ class _HospitalDoctorReportsScreenState
                             .where('doctorId', isEqualTo: doctorId)
                             .get(),
                         builder: (ctx, appSnap) {
-                          int total = appSnap.data?.docs.length ?? 0;
-                          int completed = appSnap.data?.docs
-                              .where((a) => a['status'] == 'completed')
-                              .length ??
-                              0;
+                          final allApps = appSnap.data?.docs ?? [];
+                          final total = allApps.length;
+
+                          final completed = allApps
+                              .where((a) =>
+                          (a.data()['status'] ?? '') ==
+                              'completed')
+                              .length;
 
                           return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
+                            margin:
+                            const EdgeInsets.only(bottom: 12),
+                            color: cs.surface,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius:
+                              BorderRadius.circular(14),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(14),
@@ -119,21 +138,44 @@ class _HospitalDoctorReportsScreenState
                                 crossAxisAlignment:
                                 CrossAxisAlignment.start,
                                 children: [
-                                  Text(name,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16)),
+                                  Text(
+                                    name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.copyWith(
+                                      fontWeight:
+                                      FontWeight.bold,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text(email),
+                                  Text(
+                                    email,
+                                    style: TextStyle(
+                                      color: cs.onSurface
+                                          .withValues(alpha: .8),
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text('${t.specialization}: $specialization'),
-                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${t.specialization}: $specialization',
+                                    style: TextStyle(
+                                      color: cs.onSurface
+                                          .withValues(alpha: .8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
                                   Row(
                                     mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                    MainAxisAlignment
+                                        .spaceBetween,
                                     children: [
-                                      _statBox(t.appointments, total),
-                                      _statBox(t.completed ?? "Completed", completed),
+                                      _statBox(context,
+                                          t.appointments, total),
+                                      _statBox(context, t.completed,
+                                          completed),
                                     ],
                                   ),
                                 ],
@@ -153,24 +195,33 @@ class _HospitalDoctorReportsScreenState
     );
   }
 
-  Widget _statBox(String title, int value) {
+  Widget _statBox(BuildContext context, String title, int value) {
+    final cs = Theme.of(context).colorScheme;
+
     return Container(
       width: 130,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D515C),
+        color: cs.primary,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         children: [
-          Text(title,
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: cs.onPrimary),
+          ),
           const SizedBox(height: 4),
-          Text(value.toString(),
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            value.toString(),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: cs.onPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

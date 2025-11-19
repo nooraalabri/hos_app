@@ -59,8 +59,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // 🎨 الثيم
-      theme: AppTheme.theme,
-      darkTheme: ThemeData.dark(),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: app.themeMode,
 
       // 🌐 اللغة الحالية

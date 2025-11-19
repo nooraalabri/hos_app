@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _pass = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
@@ -33,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final t = AppLocalizations.of(context)!;
 
     if (!_form.currentState!.validate()) return;
+
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -48,38 +50,26 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final uid = cred.user?.uid;
-      if (uid == null) {
-        throw Exception("UID is null");
-      }
+      if (uid == null) throw Exception("UID is null");
 
       // 🔹 جلب الدور
       final role = await _getUserRole(uid);
-      if (role == null) {
-        setState(() => _error = t.loginFailed);
-        return;
-      }
 
       // 🔹 حفظ FCM Token
       await _saveFcmToken(uid);
 
       if (!mounted) return;
 
-      // 🔹 التوجيه حسب الدور
-      switch (role) {
-        case 'headadmin':
-          _go(AppRoutes.headAdminHome);
-          break;
-        case 'hospitaladmin':
-          _go(AppRoutes.hospitalAdminHome);
-          break;
-        case 'doctor':
-          _go(AppRoutes.doctorHome);
-          break;
-        case 'patient':
-          _go(AppRoutes.patientHome);
-          break;
-        default:
-          setState(() => _error = t.unknownRole);
+      if (role == 'headadmin') {
+        _go(AppRoutes.headAdminHome);
+      } else if (role == 'hospitaladmin') {
+        _go(AppRoutes.hospitalAdminHome);
+      } else if (role == 'doctor') {
+        _go(AppRoutes.doctorHome);
+      } else if (role == 'patient') {
+        _go(AppRoutes.patientHome);
+      } else {
+        setState(() => _error = t.unknownRole);
       }
     } on FirebaseAuthException catch (e) {
       String msg = t.loginFailed;
@@ -105,9 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
-    } catch (e) {
-      debugPrint("⚠️ Error saving FCM token: $e");
-    }
+    } catch (_) {}
   }
 
   Future<String?> _getUserRole(String uid) async {
@@ -124,8 +112,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -134,11 +124,23 @@ class _LoginScreenState extends State<LoginScreen> {
               key: _form,
               child: Column(
                 children: [
-                  Image.asset('assets/logo.png', height: 120),
-                  const SizedBox(height: 10),
+                  // Logo
+                  Image.asset(
+                    'assets/logo.png',
+                    height: 120,
+                    color: theme.colorScheme.primary,
+                  ),
 
-                  Text(t.welcomeBack,
-                      style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    t.welcomeBack,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
                   const SizedBox(height: 20),
 
                   // Email
@@ -159,48 +161,64 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (v) =>
                     v != null && v.length >= 8 ? null : t.min8chars,
                   ),
+
                   const SizedBox(height: 8),
 
-                  // Forgot password
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () =>
                           Navigator.pushNamed(context, AppRoutes.forgot),
-                      child: Text(t.forgotPasswordQ),
+                      child: Text(
+                        t.forgotPasswordQ,
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
                     ),
                   ),
 
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
-                      child:
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
                     ),
 
-                  // Login button
+                  const SizedBox(height: 10),
+
                   ElevatedButton(
-                    onPressed: _loading ? null : _submit,
-                    child: Padding(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 32, vertical: 12),
-                      child: _loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(t.login),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
+                    onPressed: _loading ? null : _submit,
+                    child: _loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(t.login),
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
 
-                  // Register
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(t.newUser),
+                      Text(
+                        t.newUser,
+                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.pushReplacementNamed(
                             context, AppRoutes.selectRole),
-                        child: Text(t.signUp),
+                        child: Text(
+                          t.signUp,
+                          style: TextStyle(color: theme.colorScheme.primary),
+                        ),
                       ),
                     ],
                   ),

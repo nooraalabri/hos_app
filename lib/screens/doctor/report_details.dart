@@ -15,6 +15,7 @@ class ReportDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     final Timestamp? ts = reportData['createdAt'];
     final String date = ts != null
@@ -23,51 +24,55 @@ class ReportDetails extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.primary,
         title: Text(
           t.reportDetails,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: const Color(0xFF2D515C),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
       ),
-      backgroundColor: const Color(0xFFE8F2F3),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
+                if (theme.brightness == Brightness.light)
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _title(t.reportDate),
-                _value(date),
+                _title(t.reportDate, theme),
+                _value(date, theme),
                 const SizedBox(height: 12),
 
-                _title(t.generalReport),
-                _value(reportData['report'] ?? '—'),
+                _title(t.generalReport, theme),
+                _value(reportData['report'] ?? '—', theme),
                 const SizedBox(height: 12),
 
-                _title(t.chronicDiseases),
-                _value(_formatList(reportData['chronic'])),
+                _title(t.chronicDiseases, theme),
+                _value(_formatList(reportData['chronic']), theme),
                 const SizedBox(height: 12),
 
-                _title(t.allergies),
-                _value(reportData['allergies'] ?? '—'),
+                _title(t.allergies, theme),
+                _value(reportData['allergies'] ?? '—', theme),
                 const SizedBox(height: 12),
 
-                _title(t.medications),
-                _medList(context, t),
+                _title(t.medications, theme),
+                _medList(context, t, theme),
               ],
             ),
           ),
@@ -76,26 +81,34 @@ class ReportDetails extends StatelessWidget {
     );
   }
 
-  Widget _title(String text) {
+  // =======================  TITLES  =======================
+
+  Widget _title(String text, ThemeData theme) {
     return Text(
       text,
-      style: const TextStyle(
+      style: theme.textTheme.titleMedium!.copyWith(
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2D515C),
+        color: theme.colorScheme.primary,
         fontSize: 15,
       ),
     );
   }
 
-  Widget _value(String text) {
+  // =======================  VALUES  =======================
+
+  Widget _value(String text, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 15, color: Colors.black87),
+        style: theme.textTheme.bodyMedium!.copyWith(
+          fontSize: 15,
+        ),
       ),
     );
   }
+
+  // =======================  LIST FORMAT  =======================
 
   String _formatList(dynamic data) {
     if (data == null) return '—';
@@ -103,9 +116,16 @@ class ReportDetails extends StatelessWidget {
     return data.toString();
   }
 
-  Widget _medList(BuildContext context, AppLocalizations t) {
+  // =======================  MEDICINES LIST  =======================
+
+  Widget _medList(BuildContext context, AppLocalizations t, ThemeData theme) {
     final meds = reportData['medicationsList'] ?? [];
-    if (meds.isEmpty) return const Text('—', style: TextStyle(fontSize: 15));
+    if (meds.isEmpty) {
+      return Text(
+        '—',
+        style: theme.textTheme.bodyMedium!.copyWith(fontSize: 15),
+      );
+    }
 
     return Column(
       children: meds.map<Widget>((m) {
@@ -113,17 +133,25 @@ class ReportDetails extends StatelessWidget {
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFEDF4F4),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("• ${m['name'] ?? ''}",
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              Text("${t.dosage}: ${m['dosage'] ?? ''}"),
-              Text("${t.days}: ${m['days'] ?? ''}"),
-              Text("${t.notes}: ${m['notes'] ?? ''}"),
+              Text(
+                "• ${m['name'] ?? ''}",
+                style: theme.textTheme.bodyLarge!.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              Text("${t.dosage}: ${m['dosage'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
+              Text("${t.days}: ${m['days'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
+              Text("${t.notes}: ${m['notes'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
             ],
           ),
         );

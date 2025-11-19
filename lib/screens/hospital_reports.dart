@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,13 +26,16 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     FS.hospitalForAdmin(uid).then((d) {
-      setState(() => hospId = d?['id']);
+      if (mounted) {
+        setState(() => hospId = d?['id']);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     final periodKey = switch (p) {
       Period.weekly => "weekly",
@@ -42,15 +44,33 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.hospitalReports)),
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          t.hospitalReports,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+      ),
+
       drawer: const AdminDrawer(),
+      backgroundColor: theme.scaffoldBackgroundColor,
+
       body: hospId == null
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
+      )
           : FutureBuilder<Map<String, int>>(
         future: FS.statsForHospital(hospId!, periodKey),
         builder: (context, snap) {
           if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            );
           }
 
           final m = snap.data ?? const {
@@ -64,9 +84,9 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
               (m['visits'] ?? 0);
 
           final sections = [
-            _sec(m['new'] ?? 0, Colors.purple),
-            _sec(m['appointments'] ?? 0, Colors.teal),
-            _sec(m['visits'] ?? 0, Colors.blueGrey),
+            _sec(m['new'] ?? 0, theme.colorScheme.primary),
+            _sec(m['appointments'] ?? 0, theme.colorScheme.tertiary),
+            _sec(m['visits'] ?? 0, theme.colorScheme.secondary),
           ];
 
           return SingleChildScrollView(
@@ -74,48 +94,63 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Search + Period Selector
+                // Search + Segmented Button
                 Row(
                   children: [
                     Expanded(
-                        child: _SearchBox(
-                            onChanged: (s) {}, hint: t.search)),
+                      child: _SearchBox(
+                        onChanged: (s) {},
+                        hint: t.search,
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     SegmentedButton<Period>(
                       segments: [
                         ButtonSegment(
-                            value: Period.weekly,
-                            label: Text(t.weekly)),
+                            value: Period.weekly, label: Text(t.weekly)),
                         ButtonSegment(
-                            value: Period.monthly,
-                            label: Text(t.monthly)),
+                            value: Period.monthly, label: Text(t.monthly)),
                         ButtonSegment(
-                            value: Period.yearly,
-                            label: Text(t.yearly)),
+                            value: Period.yearly, label: Text(t.yearly)),
                       ],
                       selected: {p},
                       onSelectionChanged: (s) =>
                           setState(() => p = s.first),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(
+                          theme.colorScheme.surfaceContainerHighest,
+                        ),
+                        foregroundColor: WidgetStatePropertyAll(
+                          theme.colorScheme.onSurface,
+                        ),
+                        side: WidgetStatePropertyAll(
+                          BorderSide(
+                              color: theme.colorScheme.outline),
+                        ),
+                      ),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 20),
 
-                // Pie Chart
+                // Pie Chart Card
                 Card(
+                  color: theme.colorScheme.surface,
+                  shadowColor:
+                  theme.colorScheme.shadow.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  elevation: 3,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
                         Text(
                           t.hospitalOverview,
-                          style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 10),
 
@@ -135,17 +170,23 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                         const SizedBox(height: 12),
 
                         _legend(
-                            color: Colors.purple,
-                            text: t.newRegister,
-                            value: m['new'] ?? 0),
+                          context,
+                          color: theme.colorScheme.primary,
+                          text: t.newRegister,
+                          value: m['new'] ?? 0,
+                        ),
                         _legend(
-                            color: Colors.teal,
-                            text: t.appointments,
-                            value: m['appointments'] ?? 0),
+                          context,
+                          color: theme.colorScheme.tertiary,
+                          text: t.appointments,
+                          value: m['appointments'] ?? 0,
+                        ),
                         _legend(
-                            color: Colors.blueGrey,
-                            text: t.visits,
-                            value: m['visits'] ?? 0),
+                          context,
+                          color: theme.colorScheme.secondary,
+                          text: t.visits,
+                          value: m['visits'] ?? 0,
+                        ),
                       ],
                     ),
                   ),
@@ -153,24 +194,27 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 
                 const SizedBox(height: 20),
 
+                // Doctor Reports Button
                 _bigButton(
                   context,
                   t.doctorReports,
                   icon: Icons.medical_information,
                   onTap: () {
-                    Navigator.pushNamed(context,
-                        HospitalDoctorReportsScreen.route);
+                    Navigator.pushNamed(
+                        context, HospitalDoctorReportsScreen.route);
                   },
                 ),
+
                 const SizedBox(height: 12),
 
+                // Patient Reports Button
                 _bigButton(
                   context,
                   t.patientReports,
                   icon: Icons.people,
                   onTap: () {
-                    Navigator.pushNamed(context,
-                        HospitalPatientReportsScreen.route);
+                    Navigator.pushNamed(
+                        context, HospitalPatientReportsScreen.route);
                   },
                 ),
 
@@ -183,6 +227,7 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
     );
   }
 
+  // -------- PIE CHART SECTION --------
   PieChartSectionData _sec(int v, Color c) {
     return PieChartSectionData(
       value: (v <= 0 ? 1 : v).toDouble(),
@@ -197,45 +242,58 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
     );
   }
 
-  Widget _legend(
+  // -------- LEGEND --------
+  Widget _legend(BuildContext context,
       {required Color color, required String text, required int value}) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Container(
-              width: 12,
-              height: 12,
-              decoration:
-              BoxDecoration(color: color, shape: BoxShape.circle)),
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text)),
-          Text(value.toString(),
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 16)),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+          Text(
+            value.toString(),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          )
         ],
       ),
     );
   }
 
+  // -------- BUTTON --------
   Widget _bigButton(BuildContext ctx, String title,
       {IconData icon = Icons.arrow_forward_ios, VoidCallback? onTap}) {
-    return Container(
-      decoration: BoxDecoration(
-          color: const Color(0xFF2D515C),
-          borderRadius: BorderRadius.circular(18)),
+    final theme = Theme.of(ctx);
+
+    return Card(
+      color: theme.colorScheme.primary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.white),
-        title: Text(title,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white),
+        leading: Icon(icon, color: theme.colorScheme.onPrimary),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing:
+        Icon(Icons.chevron_right, color: theme.colorScheme.onPrimary),
         onTap: onTap,
       ),
     );
   }
 }
 
+// -------- SEARCH BOX --------
 class _SearchBox extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
@@ -244,6 +302,8 @@ class _SearchBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return TextField(
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -251,7 +311,7 @@ class _SearchBox extends StatelessWidget {
         suffixIcon: const Icon(Icons.mic_none),
         hintText: hint,
         filled: true,
-        fillColor: Colors.black.withOpacity(.05),
+        fillColor: theme.colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,

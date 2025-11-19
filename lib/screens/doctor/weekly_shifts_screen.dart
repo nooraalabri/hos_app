@@ -10,22 +10,26 @@ class ShiftsOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFE8F2F3),
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D515C),
+          backgroundColor: theme.colorScheme.primary,
           title: Text(
             t.myShifts,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
           bottom: TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
+            indicatorColor: theme.colorScheme.onPrimary,
+            labelColor: theme.colorScheme.onPrimary,
+            unselectedLabelColor: theme.colorScheme.onPrimary.withValues(alpha: 0.6),
             tabs: [
               Tab(text: t.daily),
               Tab(text: t.weekly),
@@ -46,6 +50,7 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
   Widget _buildShiftList(BuildContext context, String doctorId, String type) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     late final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
     if (type == 'daily') {
@@ -60,8 +65,10 @@ class ShiftsOverviewScreen extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF2D515C)),
+          return Center(
+            child: CircularProgressIndicator(
+              color: theme.colorScheme.primary,
+            ),
           );
         }
 
@@ -74,7 +81,9 @@ class ShiftsOverviewScreen extends StatelessWidget {
           return Center(
             child: Text(
               t.noShifts,
-              style: const TextStyle(color: Colors.black54, fontSize: 16),
+              style: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.hintColor,
+              ),
             ),
           );
         }
@@ -82,12 +91,14 @@ class ShiftsOverviewScreen extends StatelessWidget {
         final shifts = docs.map((d) {
           final data = d.data();
           final raw = data['dateTs'];
+
           Timestamp? ts;
           if (raw is Timestamp) ts = raw;
           else if (raw is String) {
             final parsed = DateTime.tryParse(raw);
             if (parsed != null) ts = Timestamp.fromDate(parsed);
           }
+
           return {
             'id': d.id,
             'date': data['date'] ?? '',
@@ -117,29 +128,31 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
             return Card(
               margin: const EdgeInsets.only(bottom: 14),
-              color: const Color(0xFF2D515C),
+              color: theme.colorScheme.primary,
+              elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              elevation: 3,
               child: ExpansionTile(
-                collapsedIconColor: Colors.white,
-                iconColor: Colors.white,
+                collapsedIconColor: theme.colorScheme.onPrimary,
+                iconColor: theme.colorScheme.onPrimary,
                 title: Text(
                   "$day • $date",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
                 subtitle: Text(
                   "${t.timeLabel}: $start - $end",
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                  ),
                 ),
                 children: [
                   Container(
-                    color: Colors.white,
+                    color: theme.cardColor,
                     padding: const EdgeInsets.all(12),
                     width: double.infinity,
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -163,7 +176,9 @@ class ShiftsOverviewScreen extends StatelessWidget {
                           return Center(
                             child: Text(
                               t.noAppointmentsInShift,
-                              style: const TextStyle(color: Colors.grey, fontSize: 15),
+                              style: theme.textTheme.bodyMedium!.copyWith(
+                                color: theme.hintColor,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           );
@@ -174,9 +189,9 @@ class ShiftsOverviewScreen extends StatelessWidget {
                             final m = a.data();
                             final name = m['patientName'] ?? '—';
                             final status = m['status'] ?? '—';
+
                             final rawTime = m['time'];
                             String time = '';
-
                             if (rawTime is Timestamp) {
                               final dt = rawTime.toDate().toLocal();
                               time =
@@ -188,22 +203,24 @@ class ShiftsOverviewScreen extends StatelessWidget {
                             return Container(
                               margin: const EdgeInsets.only(top: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE8F2F3),
+                                color: theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: ListTile(
-                                leading: const Icon(Icons.schedule,
-                                    color: Color(0xFF2D515C)),
+                                leading: Icon(
+                                  Icons.schedule,
+                                  color: theme.colorScheme.primary,
+                                ),
                                 title: Text(
                                   name,
-                                  style: const TextStyle(
+                                  style: theme.textTheme.titleMedium!.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2D515C),
+                                    color: theme.colorScheme.primary,
                                   ),
                                 ),
                                 subtitle: Text(
                                   "${t.timeLabel}: $time\n${t.statusLabel}: $status",
-                                  style: const TextStyle(color: Colors.black87),
+                                  style: theme.textTheme.bodyMedium,
                                 ),
                                 isThreeLine: true,
                               ),

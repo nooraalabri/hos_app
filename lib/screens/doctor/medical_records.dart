@@ -40,6 +40,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
   Future<void> _fetchPatient() async {
     final doc = await _db.collection('users').doc(widget.patientId).get();
     if (!doc.exists) return;
+
     final data = doc.data()!;
     setState(() {
       _patient = data;
@@ -63,6 +64,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
 
   Future<void> _saveUpdates() async {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     setState(() => _saving = true);
     try {
@@ -77,6 +79,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
       for (final med in _medicines) {
         final name = med['name']!.text.trim();
         if (name.isEmpty) continue;
+
         await _db
             .collection('users')
             .doc(widget.patientId)
@@ -89,51 +92,65 @@ class _MedicalRecordState extends State<MedicalRecord> {
         });
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.medicalRecordUpdated)),
-        );
-        setState(() {
-          _editing = false;
-          _medicines.clear();
-          _fetchMedicines();
-        });
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t.medicalRecordUpdated),
+          backgroundColor: theme.colorScheme.primary,
+        ),
+      );
+
+      setState(() {
+        _editing = false;
+        _medicines.clear();
+      });
+
+      _fetchMedicines();
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("${t.error} $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("${t.error} $e")));
+      }
     } finally {
-      setState(() => _saving = false);
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
   void _addMedicineRow() {
-    setState(() {
-      _medicines.add({
-        'name': TextEditingController(),
-        'dosage': TextEditingController(),
-        'days': TextEditingController(),
-      });
+    _medicines.add({
+      'name': TextEditingController(),
+      'dosage': TextEditingController(),
+      'days': TextEditingController(),
     });
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F2F3),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D515C),
+        backgroundColor: theme.colorScheme.primary,
         title: Text(
           t.medicalRecord,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
       ),
       body: _patient == null
-          ? const Center(
-        child: CircularProgressIndicator(color: Color(0xFF2D515C)),
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
       )
           : ListView(
         padding: const EdgeInsets.all(16),
@@ -152,9 +169,13 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
+  // ================= Patient Info =================
+
   Widget _buildPatientInfo(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return Card(
-      color: const Color(0xFF2D515C),
+      color: theme.colorScheme.primary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -172,21 +193,25 @@ class _MedicalRecordState extends State<MedicalRecord> {
   }
 
   Widget _infoRow(String label, String value) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           Text(
             '$label: ',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
               fontWeight: FontWeight.bold,
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: Colors.white70),
+              style: TextStyle(
+                color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -195,9 +220,13 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
+  // ================= Medical Info =================
+
   Widget _buildMedicalSection(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return Card(
-      color: Colors.white,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -206,10 +235,9 @@ class _MedicalRecordState extends State<MedicalRecord> {
           children: [
             Text(
               t.medicalInfo,
-              style: const TextStyle(
+              style: theme.textTheme.titleMedium!.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D515C),
-                fontSize: 16,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 12),
@@ -218,6 +246,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
               readOnly: !_editing,
               decoration: InputDecoration(
                 labelText: t.chronicDiseases,
+                filled: true,
+                fillColor: theme.inputDecorationTheme.fillColor,
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -227,6 +257,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
               readOnly: !_editing,
               decoration: InputDecoration(
                 labelText: t.allergies,
+                filled: true,
+                fillColor: theme.inputDecorationTheme.fillColor,
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -236,9 +268,13 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
+  // ================= Medicines =================
+
   Widget _buildMedicinesSection(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return Card(
-      color: Colors.white,
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -247,32 +283,39 @@ class _MedicalRecordState extends State<MedicalRecord> {
           children: [
             Text(
               t.medicines,
-              style: const TextStyle(
+              style: theme.textTheme.titleMedium!.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2D515C),
-                fontSize: 16,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 10),
             if (_existingMeds.isEmpty)
-              Text(t.noMedicines,
-                  style: const TextStyle(color: Colors.black54))
+              Text(
+                t.noMedicines,
+                style: theme.textTheme.bodyMedium!.copyWith(
+                  color: theme.hintColor,
+                ),
+              )
             else
-              ..._existingMeds.map((m) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(m['name'] ?? '-'),
-                subtitle: Text(
-                    "${t.medicines}: ${m['dosage'] ?? '-'} • ${t.time}: ${m['days'] ?? '-'}"),
-              )),
+              ..._existingMeds.map(
+                    (m) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(m['name'] ?? '-'),
+                  subtitle: Text(
+                    "${t.medicines}: ${m['dosage'] ?? '-'} • ${t.time}: ${m['days'] ?? '-'}",
+                  ),
+                ),
+              ),
+
             if (_editing) ...[
               const SizedBox(height: 10),
-              ..._medicines.map((m) => _medicineRow(t, m)).toList(),
+              ..._medicines.map((m) => _medicineRow(t, m)),
               TextButton.icon(
                 onPressed: _addMedicineRow,
-                icon: const Icon(Icons.add, color: Color(0xFF2D515C)),
+                icon: Icon(Icons.add, color: theme.colorScheme.primary),
                 label: Text(
                   t.addMedicine,
-                  style: const TextStyle(color: Color(0xFF2D515C)),
+                  style: TextStyle(color: theme.colorScheme.primary),
                 ),
               ),
             ],
@@ -282,7 +325,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  Widget _medicineRow(AppLocalizations t, Map<String, TextEditingController> med) {
+  Widget _medicineRow(
+      AppLocalizations t, Map<String, TextEditingController> med) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -315,7 +359,11 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
+  // ================= Reports =================
+
   Widget _buildReportsSection(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return StreamBuilder<QuerySnapshot>(
       stream: _db
           .collection('users')
@@ -327,64 +375,90 @@ class _MedicalRecordState extends State<MedicalRecord> {
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
+
         final docs = snap.data!.docs;
+
         if (docs.isEmpty) {
           return Text(
             t.noPreviousReports,
-            style: const TextStyle(color: Colors.black54),
+            style: theme.textTheme.bodyMedium!
+                .copyWith(color: theme.hintColor),
           );
         }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               t.previousReports,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D515C),
-                  fontSize: 16),
+              style: theme.textTheme.titleMedium!.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 10),
-            ...docs.map((d) {
-              final r = d.data() as Map<String, dynamic>;
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                color: const Color(0xFF2D515C),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
-                          style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('${t.notes}: ${r['notes'] ?? '-'}',
-                          style: const TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 4),
-                      Text('${t.hospital}: ${r['hospitalName'] ?? '-'}',
-                          style: const TextStyle(color: Colors.white70)),
-                    ],
+            ...docs.map(
+                  (d) {
+                final r = d.data() as Map<String, dynamic>;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              );
-            }),
+                  color: theme.colorScheme.primary,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${t.notes}: ${r['notes'] ?? '-'}',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary
+                                .withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${t.hospital}: ${r['hospitalName'] ?? '-'}',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary
+                                .withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         );
       },
     );
   }
 
+  // ================= Button =================
+
   Widget _buildUpdateButton(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return Center(
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2D515C),
+          backgroundColor: theme.colorScheme.primary,
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         onPressed: _saving
             ? null
@@ -396,17 +470,20 @@ class _MedicalRecordState extends State<MedicalRecord> {
           }
         },
         child: _saving
-            ? const SizedBox(
+            ? SizedBox(
           height: 22,
           width: 22,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: Colors.white,
+            color: theme.colorScheme.onPrimary,
           ),
         )
             : Text(
           _editing ? t.saveChanges : t.updateMedicalRecord,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontSize: 16,
+          ),
         ),
       ),
     );

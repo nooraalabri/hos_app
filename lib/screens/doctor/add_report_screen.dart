@@ -70,16 +70,17 @@ class _AddReportState extends State<AddReport> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F2F3),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D515C),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         title: Text(
           t.reportAddUpdate,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: theme.appBarTheme.titleTextStyle,
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: theme.appBarTheme.iconTheme,
       ),
       body: Form(
         key: _form,
@@ -87,8 +88,11 @@ class _AddReportState extends State<AddReport> {
           padding: const EdgeInsets.all(20),
           children: [
             Text(t.generalReport,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style: theme.textTheme.titleMedium!.copyWith(
+                  fontWeight: FontWeight.bold,
+                )),
             const SizedBox(height: 8),
+
             TextFormField(
               controller: _general,
               maxLines: 3,
@@ -96,16 +100,21 @@ class _AddReportState extends State<AddReport> {
               validator: (v) =>
               v == null || v.isEmpty ? t.generalReportRequired : null,
             ),
+
             const SizedBox(height: 20),
 
             Text(t.patientMedicalInfo,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style: theme.textTheme.titleMedium!.copyWith(
+                  fontWeight: FontWeight.bold,
+                )),
             const SizedBox(height: 8),
+
             TextFormField(
               controller: _chronic,
               decoration: _input(t.chronicHint),
             ),
             const SizedBox(height: 10),
+
             TextFormField(
               controller: _allergies,
               decoration: _input(t.allergyHint),
@@ -113,14 +122,17 @@ class _AddReportState extends State<AddReport> {
             const SizedBox(height: 20),
 
             Text(t.medicineSection,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                style: theme.textTheme.titleMedium!.copyWith(
+                  fontWeight: FontWeight.bold,
+                )),
             const SizedBox(height: 8),
+
             _medicineTable(t),
             const SizedBox(height: 30),
 
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D515C),
+                backgroundColor: theme.colorScheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -132,20 +144,26 @@ class _AddReportState extends State<AddReport> {
                   width: 22,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white))
-                  : Text(t.saveReport,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
+                  : Text(
+                t.saveReport,
+                style: TextStyle(
+                  color: theme.colorScheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
+
             const SizedBox(height: 30),
 
-            Text(t.previousReports,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                    color: Colors.black87)),
+            Text(
+              t.previousReports,
+              style: theme.textTheme.titleLarge!.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
+
             _previousReports(t),
           ],
         ),
@@ -226,21 +244,21 @@ class _AddReportState extends State<AddReport> {
   }
 
   Widget _medicineTable(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2))
+                  color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
             ],
           ),
           child: Table(
-            border: TableBorder.all(color: Colors.grey.shade300),
+            border: TableBorder.all(color: theme.dividerColor),
             columnWidths: const {
               0: FlexColumnWidth(2),
               1: FlexColumnWidth(1.5),
@@ -250,7 +268,9 @@ class _AddReportState extends State<AddReport> {
             },
             children: [
               TableRow(
-                decoration: const BoxDecoration(color: Color(0xFF2D515C)),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                ),
                 children: [
                   _TableHeader(t.medicineName),
                   _TableHeader(t.medicineDosage),
@@ -262,48 +282,74 @@ class _AddReportState extends State<AddReport> {
               ..._medicines.asMap().entries.map((entry) {
                 final i = entry.key;
                 final med = entry.value;
-                return TableRow(children: [
-                  _TableCell(TextFormField(
-                      controller: med['name'],
-                      decoration: _miniInput(t.medicineNameHint,
-                          color: Colors.grey[200]!),
-                      validator: (v) =>
-                      v == null || v.isEmpty ? t.requiredField : null)),
-                  _TableCell(TextFormField(
-                      controller: med['dosage'],
-                      decoration: _miniInput(t.medicineDosageHint))),
-                  _TableCell(TextFormField(
-                      controller: med['days'],
-                      keyboardType: TextInputType.number,
-                      decoration: _miniInput(t.medicineDaysHint))),
-                  _TableCell(TextFormField(
-                      controller: med['notes'],
-                      decoration: _miniInput(t.medicineNotesHint))),
-                  _TableCell(IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent),
-                      onPressed: () => _removeMedicineRow(i))),
-                ]);
+
+                return TableRow(
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                  ),
+                  children: [
+                    _TableCell(
+                      TextFormField(
+                        controller: med['name'],
+                        decoration: _miniInput(t.medicineNameHint),
+                        validator: (v) =>
+                        v == null || v.isEmpty ? t.requiredField : null,
+                      ),
+                    ),
+                    _TableCell(
+                      TextFormField(
+                        controller: med['dosage'],
+                        decoration: _miniInput(t.medicineDosageHint),
+                      ),
+                    ),
+                    _TableCell(
+                      TextFormField(
+                        controller: med['days'],
+                        keyboardType: TextInputType.number,
+                        decoration: _miniInput(t.medicineDaysHint),
+                      ),
+                    ),
+                    _TableCell(
+                      TextFormField(
+                        controller: med['notes'],
+                        decoration: _miniInput(t.medicineNotesHint),
+                      ),
+                    ),
+                    _TableCell(
+                      IconButton(
+                        icon: Icon(Icons.delete,
+                            color: theme.colorScheme.error),
+                        onPressed: () => _removeMedicineRow(i),
+                      ),
+                    ),
+                  ],
+                );
               }),
             ],
           ),
         ),
+
         const SizedBox(height: 10),
+
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             onPressed: _addMedicineRow,
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2D515C)),
+            icon: Icon(Icons.add_circle_outline,
+                color: theme.colorScheme.primary),
             label: Text(
               t.addMedicine,
-              style: const TextStyle(color: Color(0xFF2D515C)),
+              style: TextStyle(color: theme.colorScheme.primary),
             ),
           ),
-        ),
+        )
       ],
     );
   }
 
   Widget _previousReports(AppLocalizations t) {
+    final theme = Theme.of(context);
+
     return StreamBuilder<QuerySnapshot>(
       stream: _db
           .collection('reports')
@@ -325,12 +371,14 @@ class _AddReportState extends State<AddReport> {
             final date = ts != null
                 ? "${ts.toDate().year}-${ts.toDate().month}-${ts.toDate().day}"
                 : '—';
+
             return Card(
+              color: theme.cardColor,
               child: ListTile(
                 title: Text(d['report'] ?? t.noDetails),
                 subtitle: Text("${t.dateLabel}: $date"),
-                trailing: const Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Color(0xFF2D515C)),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 16, color: theme.colorScheme.primary),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -347,44 +395,66 @@ class _AddReportState extends State<AddReport> {
     );
   }
 
-  InputDecoration _input(String hint) => InputDecoration(
-    hintText: hint,
-    filled: true,
-    fillColor: Colors.white,
-    border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFF2D515C))),
-  );
+  InputDecoration _input(String hint) {
+    final theme = Theme.of(context);
 
-  static InputDecoration _miniInput(String hint, {Color color = Colors.white}) =>
-      InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: color,
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-        border: InputBorder.none,
-      );
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: theme.inputDecorationTheme.fillColor,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(
+          color: theme.colorScheme.primary,
+        ),
+      ),
+      hintStyle: TextStyle(color: theme.hintColor),
+    );
+  }
+
+  InputDecoration _miniInput(String hint) {
+    final theme = Theme.of(context);
+
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: theme.inputDecorationTheme.fillColor,
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+      border: InputBorder.none,
+      hintStyle: TextStyle(color: theme.hintColor),
+    );
+  }
 }
 
 class _TableHeader extends StatelessWidget {
   final String text;
   const _TableHeader(this.text);
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(6),
-    child: Center(
-        child: Text(text,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 13))),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(6),
+      child: Center(
+        child: Text(
+          text,
+          style: theme.textTheme.bodyMedium!.copyWith(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TableCell extends StatelessWidget {
   final Widget child;
   const _TableCell(this.child);
+
   @override
   Widget build(BuildContext context) =>
       Padding(padding: const EdgeInsets.all(4), child: child);

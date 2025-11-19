@@ -12,27 +12,51 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.settings),
+        backgroundColor: cs.surface,
+        elevation: 0,
+        iconTheme: IconThemeData(color: cs.onSurface),
+        title: Text(
+          AppLocalizations.of(context)!.settings,
+          style: TextStyle(color: cs.onSurface),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close, color: cs.onSurface),
             onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
+
+      // ---------------- BODY ----------------
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // ---------------- LANGUAGE ----------------
             DropdownButtonFormField<String>(
-              value: appProvider.language,
+              initialValue: appProvider.language,   // بديل value المُهمل
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.language,
+                labelStyle: TextStyle(color: cs.onSurface),
+                filled: true,
+
+                // surfaceVariant مُهمل → استبداله بـ surfaceContainerHighest
+                fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
+              dropdownColor: cs.surface,
               items: const [
                 DropdownMenuItem(value: "en", child: Text("English")),
                 DropdownMenuItem(value: "ar", child: Text("العربية")),
@@ -47,20 +71,30 @@ class SettingsScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
+            // ---------------- DARK MODE SWITCH ----------------
             SwitchListTile(
-              title: Text(AppLocalizations.of(context)!.dark_mode),
+              title: Text(
+                AppLocalizations.of(context)!.dark_mode,
+                style: TextStyle(color: cs.onSurface),
+              ),
               value: appProvider.isDarkMode,
-              onChanged: (value) {
-                appProvider.toggleDarkMode(value);
-              },
-              secondary: const Icon(Icons.nightlight_round),
+              onChanged: (value) => appProvider.toggleDarkMode(value),
+              secondary: Icon(Icons.nightlight_round, color: cs.onSurface),
+
+              // activeColor مُهمل → استبداله بخيارات جديدة:
+              activeThumbColor: cs.primary,
+              activeTrackColor: cs.primary.withValues(alpha: 0.4),
             ),
 
             const Divider(height: 40),
 
+            // ---------------- CHANGE PASSWORD ----------------
             ListTile(
-              leading: const Icon(Icons.lock),
-              title: Text(AppLocalizations.of(context)!.change_password),
+              leading: Icon(Icons.lock, color: cs.primary),
+              title: Text(
+                AppLocalizations.of(context)!.change_password,
+                style: TextStyle(color: cs.onSurface),
+              ),
               onTap: () {
                 Navigator.pushNamed(context, ChangePasswordScreen.route);
               },
@@ -68,9 +102,15 @@ class SettingsScreen extends StatelessWidget {
 
             const Spacer(),
 
+            // ---------------- LOGOUT BUTTON ----------------
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
                 minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: const Icon(Icons.logout),
               label: Text(AppLocalizations.of(context)!.logout),

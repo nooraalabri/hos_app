@@ -90,7 +90,6 @@ class _HomeTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _HomeTile({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -99,18 +98,27 @@ class _HomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2D515C),
+          color: isDark
+              ? cs.surfaceContainerHighest
+              : const Color(0xFF2D515C),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 28),
+            Icon(
+              icon,
+              color: isDark ? cs.onSurfaceVariant : Colors.white,
+              size: 28,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -118,8 +126,8 @@ class _HomeTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDark ? cs.onSurfaceVariant : Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -127,12 +135,19 @@ class _HomeTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: isDark
+                          ? cs.onSurfaceVariant.withValues(alpha: 0.7)
+                          : Colors.white70,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white),
+            Icon(
+              Icons.chevron_right,
+              color: isDark ? cs.onSurfaceVariant : Colors.white,
+            ),
           ],
         ),
       ),

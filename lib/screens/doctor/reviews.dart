@@ -10,19 +10,20 @@ class ReviewsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-
-    const primaryColor = Color(0xFF00695C);
-    const lightColor = Color(0xFFE0F2F1);
-    const accentColor = Color(0xFF009688);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: lightColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.primary,
         title: Text(
           t.patientReviews,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onPrimary,
+          ),
         ),
-        backgroundColor: primaryColor,
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
         centerTitle: true,
         elevation: 2,
       ),
@@ -30,8 +31,10 @@ class ReviewsScreen extends StatelessWidget {
         stream: FS.doctorReviews(doctorId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: primaryColor),
+            return Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
             );
           }
 
@@ -39,9 +42,8 @@ class ReviewsScreen extends StatelessWidget {
             return Center(
               child: Text(
                 t.noReviews,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
+                style: theme.textTheme.bodyLarge!.copyWith(
+                  color: theme.hintColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -49,11 +51,13 @@ class ReviewsScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data!.docs
-            ..sort((a, b) {
-              final t1 = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
-              final t2 = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
-              return t2.compareTo(t1);
-            });
+            ..sort(
+                  (a, b) {
+                final t1 = (a['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+                final t2 = (b['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+                return t2.compareTo(t1);
+              },
+            );
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -70,40 +74,45 @@ class ReviewsScreen extends StatelessWidget {
                   : "—";
 
               return Card(
-                elevation: 4,
-                color: Colors.white,
+                elevation: 3,
+                color: theme.cardColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: accentColor.withOpacity(0.2)),
+                  side: BorderSide(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ======== Header Row ========
                       Row(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 18,
-                            backgroundColor: accentColor,
-                            child: Icon(Icons.person, color: Colors.white, size: 20),
+                            backgroundColor: theme.colorScheme.primary,
+                            child: Icon(
+                              Icons.person,
+                              color: theme.colorScheme.onPrimary,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               patientName,
-                              style: const TextStyle(
+                              style: theme.textTheme.titleMedium!.copyWith(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                                color: primaryColor,
+                                color: theme.colorScheme.primary,
                               ),
                             ),
                           ),
                           Text(
                             formattedDate,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
+                            style: theme.textTheme.bodySmall!.copyWith(
+                              color: theme.hintColor,
                             ),
                           ),
                         ],
@@ -111,11 +120,14 @@ class ReviewsScreen extends StatelessWidget {
 
                       const SizedBox(height: 10),
 
+                      // ======== Stars ========
                       Row(
                         children: List.generate(
                           5,
                               (i) => Icon(
-                            i < stars ? Icons.star_rounded : Icons.star_border_rounded,
+                            i < stars
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
                             color: Colors.amber.shade600,
                             size: 22,
                           ),
@@ -124,18 +136,20 @@ class ReviewsScreen extends StatelessWidget {
 
                       const SizedBox(height: 12),
 
+                      // ======== Review Text ========
                       Container(
                         decoration: BoxDecoration(
-                          color: lightColor,
+                          color: theme.colorScheme.surfaceContainerHigh
+                              .withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         padding: const EdgeInsets.all(12),
                         child: Text(
                           reviewText,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Colors.black87,
+                          style: theme.textTheme.bodyMedium!.copyWith(
+                            color: theme.colorScheme.onSurface,
                             height: 1.4,
+                            fontSize: 15,
                           ),
                         ),
                       ),

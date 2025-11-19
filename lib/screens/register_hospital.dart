@@ -52,31 +52,23 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
   // ================= VALIDATION =================
 
-  bool _isStrong(String v) {
-    if (v.length < 8) return false;
-    return RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^\w\s]).+$').hasMatch(v);
-  }
+  bool _isStrong(String v) =>
+      RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^\w\s]).{8,}$').hasMatch(v);
 
-  bool _isHospitalNameValid(String v) {
-    return v.trim().length >= 3 &&
-        RegExp(r'^[a-zA-Z0-9\u0621-\u064A ]+$').hasMatch(v);
-  }
+  bool _validHospitalName(String v) =>
+      RegExp(r'^[a-zA-Z0-9\u0621-\u064A ]{3,}$').hasMatch(v);
 
-  bool _isMOHLicenseValid(String v) {
-    return RegExp(r'^\d{5,8}$').hasMatch(v);
-  }
+  bool _validLicense(String v) =>
+      RegExp(r'^\d{5,8}$').hasMatch(v);
 
-  bool _isCRValid(String v) {
-    return RegExp(r'^\d{8}$').hasMatch(v);
-  }
+  bool _validCR(String v) =>
+      RegExp(r'^\d{8}$').hasMatch(v);
 
-  bool _isOmanPhone(String v) {
-    return RegExp(r'^[279]\d{7}$').hasMatch(v);
-  }
+  bool _validOmanNumber(String v) =>
+      RegExp(r'^[279]\d{7}$').hasMatch(v);
 
-  bool _isWebsiteValid(String v) {
-    return v.isEmpty || RegExp(r'^(https?:\/\/)').hasMatch(v);
-  }
+  bool _validWebsite(String v) =>
+      v.isEmpty || RegExp(r'^https?:\/\/').hasMatch(v);
 
   // ================= SUBMIT =================
 
@@ -98,7 +90,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     });
 
     try {
-      /// 1️⃣ إنشاء الحساب في Firebase Auth
+      // 1 — Create Account
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -114,7 +106,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
       final uid = cred.user!.uid;
 
-      /// 2️⃣ حفظ بيانات المستشفى
+      // 2 — Save Hospital
       await FS.createHospital(
         name: _name.text.trim(),
         email: _email.text.trim(),
@@ -132,14 +124,14 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
         },
       );
 
-      /// 3️⃣ حفظ بيانات المستخدم
+      // 3 — Save user
       await FS.createUser(uid, {
         'role': 'hospitaladmin',
         'hospitalId': uid,
         'approved': false,
       });
 
-      /// 4️⃣ إشعار الهيد أدمن
+      // 4 — Notify Head Admin
       try {
         await NotifyService.notifyHeadAdmin(_name.text.trim());
       } catch (_) {}
@@ -169,6 +161,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -190,75 +183,72 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
                 const SizedBox(height: 18),
 
-                // NAME
+                // ================= INPUTS =================
+
                 AppInput(
                   controller: _name,
                   label: t.hospitalName,
                   hint: t.enterOfficialHospitalName,
-                  validator: (v) =>
-                  (v == null || !_isHospitalNameValid(v)) ? t.required : null,
+                  validator: (v) => v != null && _validHospitalName(v)
+                      ? null
+                      : t.required,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // LICENSE NO
                 AppInput(
                   controller: _licenseNo,
                   label: t.licenseNumber,
-                  hint: t.mohLicenseNumber,
                   validator: (v) =>
-                  (v == null || !_isMOHLicenseValid(v)) ? t.licenseNumber : null,
+                  v != null && _validLicense(v) ? null : t.licenseNumber,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // CR NUMBER
                 AppInput(
                   controller: _crNumber,
                   label: t.crNumber,
-                  hint: t.enterCrNumber,
                   validator: (v) =>
-                  (v == null || !_isCRValid(v)) ? t.crNumber : null,
+                  v != null && _validCR(v) ? null : t.crNumber,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // PHONE
                 AppInput(
                   controller: _phone,
                   label: t.phoneNumber,
                   keyboardType: TextInputType.phone,
                   validator: (v) =>
-                  (v == null || !_isOmanPhone(v)) ? t.enterValidNumber : null,
+                  v != null && _validOmanNumber(v)
+                      ? null
+                      : t.enterValidNumber,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // EMAIL
                 AppInput(
                   controller: _email,
                   label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? t.validEmailRequired : null,
+                  (v != null && v.contains('@'))
+                      ? null
+                      : t.validEmailRequired,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // PASSWORD
                 PasswordInput(
                   controller: _pass,
                   label: t.password,
                   validator: (v) =>
-                  (v != null && _isStrong(v)) ? null : t.passwordRulesFull,
+                  _isStrong(v ?? '') ? null : t.passwordRulesFull,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // CONFIRM PASSWORD
                 PasswordInput(
                   controller: _confirmPass,
                   label: t.confirmPassword,
                   validator: (v) =>
-                  (v == _pass.text) ? null : t.passwordsDoNotMatch,
+                  v == _pass.text ? null : t.passwordsDoNotMatch,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // LOCATION
                 GestureDetector(
                   onTap: () async {
                     final result = await Navigator.push(
@@ -282,32 +272,29 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                       label: t.addressLocation,
                       hint: t.pickFromMap,
                       validator: (v) =>
-                      (v == null || v.isEmpty) ? t.required : null,
+                      v != null && v.isNotEmpty ? null : t.required,
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
 
-                const SizedBox(height: 10),
-
-                // WEBSITE
                 AppInput(
                   controller: _website,
                   label: t.websiteOptional,
-                  hint: 'https://example.com',
+                  hint: "https://example.com",
                   validator: (v) =>
-                  _isWebsiteValid(v ?? '') ? null : "Invalid URL",
+                  _validWebsite(v ?? '') ? null : "Invalid URL",
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
                 if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
                   ),
+
+                const SizedBox(height: 10),
 
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
@@ -321,17 +308,20 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
                 const SizedBox(height: 18),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(t.alreadyHaveAccount),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.pushReplacementNamed(context, AppRoutes.login),
-                      child: Text(t.login),
-                    ),
-                  ],
-                ),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(t.alreadyHaveAccount),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(
+                                context, AppRoutes.login),
+                        child: Text(t.login),
+                      )
+                    ],
+                  ),
+                )
               ],
             ),
           ),

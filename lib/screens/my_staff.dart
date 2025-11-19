@@ -9,6 +9,7 @@ import '../widgets/admin_drawer.dart';
 
 class MyStaffScreen extends StatefulWidget {
   const MyStaffScreen({super.key});
+
   @override
   State<MyStaffScreen> createState() => _MyStaffScreenState();
 }
@@ -27,19 +28,35 @@ class _MyStaffScreenState extends State<MyStaffScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.myStaff)),
+      appBar: AppBar(
+        title: Text(
+          t.myStaff,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        backgroundColor: theme.colorScheme.primary,
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+      ),
+
       drawer: const AdminDrawer(),
+
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor),
         icon: const Icon(Icons.person_add_alt_1),
         label: Text(t.addDoctor),
       ),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
+
       body: hospId == null
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : Column(
         children: [
+          // ---------------- SEARCH BOX ----------------
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
@@ -48,32 +65,38 @@ class _MyStaffScreenState extends State<MyStaffScreen> {
                 hintText: t.search,
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: Colors.black.withOpacity(.05),
+                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
+
+          // ---------------- STAFF LIST ----------------
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FS.doctorsStream(hospId!),
               builder: (context, snap) {
                 if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
                 }
 
                 final docs = snap.data!.docs.where((d) {
                   final m = d.data() as Map<String, dynamic>;
-                  final name =
-                  (m['name'] ?? '').toString().toLowerCase();
-                  final spec =
-                  (m['specialization'] ?? '').toString().toLowerCase();
+                  final name = (m['name'] ?? '').toString().toLowerCase();
+                  final spec = (m['specialization'] ?? '').toString().toLowerCase();
                   return name.contains(q) || spec.contains(q);
                 }).toList();
 
                 if (docs.isEmpty) {
-                  return Center(child: Text(t.noDoctors));
+                  return Center(
+                    child: Text(
+                      t.noDoctors,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  );
                 }
 
                 return ListView.separated(
@@ -83,6 +106,7 @@ class _MyStaffScreenState extends State<MyStaffScreen> {
                   itemBuilder: (_, i) {
                     final d = docs[i];
                     final m = d.data() as Map<String, dynamic>;
+
                     return _DoctorTile(
                       uid: d.id,
                       name: m['name'] ?? 'Doctor',
@@ -101,33 +125,52 @@ class _MyStaffScreenState extends State<MyStaffScreen> {
   }
 }
 
+// =============================================================
+//                           DOCTOR TILE
+// =============================================================
 class _DoctorTile extends StatelessWidget {
   final String uid, name, spec, email;
   final bool approved;
-  const _DoctorTile(
-      {required this.uid,
-        required this.name,
-        required this.spec,
-        required this.email,
-        required this.approved});
+
+  const _DoctorTile({
+    required this.uid,
+    required this.name,
+    required this.spec,
+    required this.email,
+    required this.approved,
+  });
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF2D515C),
+        color: theme.colorScheme.primary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: ListTile(
-        leading: const CircleAvatar(
-            backgroundColor: Colors.white24,
-            child: Icon(Icons.medical_services, color: Colors.white)),
-        title: Text(name,
-            style:
-            const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        subtitle: Text(spec, style: const TextStyle(color: Colors.white70)),
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.onPrimary.withValues(alpha:.25),
+          child: Icon(Icons.medical_services, color: theme.colorScheme.onPrimary),
+        ),
+
+        title: Text(
+          name,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+
+        subtitle: Text(
+          spec,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onPrimary.withValues(alpha:.8),
+          ),
+        ),
+
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -135,22 +178,22 @@ class _DoctorTile extends StatelessWidget {
               Container(
                 margin: const EdgeInsets.only(right: 6),
                 child: Chip(
-                    label: Text(t.pending),
-                    backgroundColor: Colors.orangeAccent),
+                  label: Text(t.pending),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  backgroundColor: Colors.orange,
+                ),
               ),
 
-            // Details
             TextButton(
               onPressed: () => _showDetails(context),
-              child: Text(t.details, style: const TextStyle(color: Colors.white)),
+              child: Text(t.details, style: TextStyle(color: theme.colorScheme.onPrimary)),
             ),
 
             const SizedBox(width: 6),
 
-            // Delete
             TextButton(
               onPressed: () => _confirmDelete(context),
-              child: Text(t.delete, style: const TextStyle(color: Colors.white)),
+              child: Text(t.delete, style: TextStyle(color: theme.colorScheme.onPrimary)),
             ),
           ],
         ),
@@ -160,20 +203,22 @@ class _DoctorTile extends StatelessWidget {
 
   void _showDetails(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(t.doctorDetails),
+        backgroundColor: theme.colorScheme.surface,
+        title: Text(t.doctorDetails, style: theme.textTheme.titleLarge),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(name, style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
-            Text('${t.specialization}: $spec'),
-            Text('${t.email}: $email'),
-            Text('${t.approved}: $approved'),
+            Text("${t.specialization}: $spec"),
+            Text("${t.email}: $email"),
+            Text("${t.approved}: $approved"),
           ],
         ),
         actions: [
@@ -188,10 +233,12 @@ class _DoctorTile extends StatelessWidget {
 
   void _confirmDelete(BuildContext context) async {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
         title: Text(t.deleteDoctor),
         content: Text(t.deleteDoctorConfirm),
         actions: [

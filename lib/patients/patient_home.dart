@@ -12,11 +12,16 @@ class PatientHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return AppScaffold(
       title: t.myProfile,
       drawer: const PatientDrawer(),
-      body: const ProfilePageBody(),
+      body: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        child: const ProfilePageBody(),
+      ),
     );
   }
 }

@@ -23,6 +23,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     } catch (_) {
       await FirebaseAuth.instance.signOut();
     }
+
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
   }
@@ -62,6 +63,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
         return;
       }
 
+      // 🔹 Hospital Admin auto-approval when hospital status changes
       if (role == 'hospitaladmin') {
         final hospId = data['hospitalId']?.toString();
         if (hospId != null && hospId.isNotEmpty) {
@@ -92,32 +94,51 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final t = AppLocalizations.of(context)!;
+
     final email = FirebaseAuth.instance.currentUser?.email ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.pendingApprovalTitle),
+        title: Text(
+          t.pendingApprovalTitle,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        backgroundColor: theme.colorScheme.primary,
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
         automaticallyImplyLeading: false,
       ),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
+
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.hourglass_empty, size: 96, color: Colors.orange),
+            Icon(
+              Icons.hourglass_empty,
+              size: 96,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(height: 16),
 
             Text(
               t.requestSubmitted,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
 
             const SizedBox(height: 8),
             Text(
               t.reviewingRegistration,
-              style: const TextStyle(fontSize: 16),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
 
@@ -125,7 +146,9 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
               const SizedBox(height: 12),
               Text(
                 "${t.signedInAs} $email",
-                style: const TextStyle(color: Colors.black54),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
 
@@ -136,10 +159,12 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: theme.colorScheme.error),
                   textAlign: TextAlign.center,
                 ),
               ),
+
+            const SizedBox(height: 8),
 
             Row(
               children: [
@@ -147,10 +172,13 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _checking ? null : _checkAgain,
                     icon: _checking
-                        ? const SizedBox(
+                        ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary,
+                      ),
                     )
                         : const Icon(Icons.refresh),
                     label: Text(t.checkAgain),
@@ -160,11 +188,12 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
+                      backgroundColor: theme.colorScheme.error,
+                      foregroundColor: theme.colorScheme.onError,
                     ),
                     onPressed: _logout,
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    label: Text(t.logout, style: const TextStyle(color: Colors.white)),
+                    icon: const Icon(Icons.logout),
+                    label: Text(t.logout),
                   ),
                 ),
               ],

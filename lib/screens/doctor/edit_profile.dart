@@ -26,10 +26,6 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
   bool _saving = false;
   String? _error;
 
-  final Color primaryColor = const Color(0xFF00695C);
-  final Color lightColor = const Color(0xFFE0F2F1);
-  final Color accentColor = const Color(0xFF009688);
-
   @override
   void initState() {
     super.initState();
@@ -52,6 +48,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
 
   Future<void> _saveProfile() async {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     if (_name.text.trim().isEmpty || _email.text.trim().isEmpty) {
       setState(() => _error = t.fillRequired);
@@ -75,10 +72,11 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
 
       if (mounted) {
         Navigator.pop(context, true);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(t.saveSuccess),
-            backgroundColor: primaryColor,
+            backgroundColor: theme.colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -91,16 +89,21 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
     }
   }
 
-  InputDecoration _fieldDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    final theme = Theme.of(context);
+
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: accentColor),
+      prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+      filled: true,
+      fillColor: theme.inputDecorationTheme.fillColor,
+      labelStyle: TextStyle(color: theme.hintColor),
       focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: primaryColor, width: 1.5),
+        borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
         borderRadius: BorderRadius.circular(10),
       ),
       enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: accentColor.withOpacity(0.4)),
+        borderSide: BorderSide(color: theme.dividerColor),
         borderRadius: BorderRadius.circular(10),
       ),
     );
@@ -109,51 +112,58 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: lightColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.primary,
         title: Text(
           t.editProfile,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: primaryColor,
         centerTitle: true,
-        elevation: 2,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Card(
-          color: Colors.white,
+          color: theme.cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 6,
+          elevation: 4,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 TextField(
                   controller: _name,
-                  decoration: _fieldDecoration(t.fullName, Icons.person),
+                  decoration: _inputDecoration(t.fullName, Icons.person),
                 ),
                 const SizedBox(height: 14),
+
                 TextField(
                   controller: _email,
-                  decoration: _fieldDecoration(t.email, Icons.email),
+                  decoration: _inputDecoration(t.email, Icons.email),
                 ),
                 const SizedBox(height: 14),
+
                 TextField(
                   controller: _specialization,
-                  decoration: _fieldDecoration(t.specialization, Icons.medical_information),
+                  decoration: _inputDecoration(t.specialization, Icons.medical_information),
                 ),
                 const SizedBox(height: 14),
+
                 TextField(
                   controller: _address,
-                  decoration: _fieldDecoration(t.address, Icons.location_on),
+                  decoration: _inputDecoration(t.address, Icons.location_on),
                 ),
                 const SizedBox(height: 14),
+
                 TextField(
                   controller: _image,
-                  decoration: _fieldDecoration(t.profileImageUrl, Icons.image),
+                  decoration: _inputDecoration(t.profileImageUrl, Icons.image),
                 ),
                 const SizedBox(height: 20),
 
@@ -162,7 +172,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.w600),
                     ),
                   ),
 
@@ -171,19 +181,19 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                   child: ElevatedButton(
                     onPressed: _saving ? null : _saveProfile,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: theme.colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: _saving
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? CircularProgressIndicator(color: theme.colorScheme.onPrimary)
                         : Text(
                       t.saveChanges,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

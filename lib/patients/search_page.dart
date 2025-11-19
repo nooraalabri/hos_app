@@ -13,7 +13,8 @@ class SearchPage extends StatefulWidget {
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateMixin {
+class _SearchPageState extends State<SearchPage>
+    with SingleTickerProviderStateMixin {
   final q = TextEditingController();
   late final TabController tabs = TabController(length: 3, vsync: this);
 
@@ -72,8 +73,14 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
             child: TabBarView(
               controller: tabs,
               children: [
-                _HospitalsList(query: q.text, onViewDoctors: _filterByHospital),
-                _SpecialisationsList(query: q.text, onViewDoctors: _filterBySpec),
+                _HospitalsList(
+                  query: q.text,
+                  onViewDoctors: _filterByHospital,
+                ),
+                _SpecialisationsList(
+                  query: q.text,
+                  onViewDoctors: _filterBySpec,
+                ),
                 _DoctorsList(
                   query: q.text,
                   hospitalFilterName: selectedHospital,
@@ -93,7 +100,10 @@ class _SearchPageState extends State<SearchPage> with SingleTickerProviderStateM
 class _HospitalsList extends StatelessWidget {
   final String query;
   final void Function(String hospitalName, String hospitalId) onViewDoctors;
-  const _HospitalsList({required this.query, required this.onViewDoctors});
+  const _HospitalsList({
+    required this.query,
+    required this.onViewDoctors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +130,8 @@ class _HospitalsList extends StatelessWidget {
 
         return _CardTile(
           title: name,
-          subtitle: '${t.location}: ${address.isEmpty ? t.notSpecified : address}',
+          subtitle:
+          '${t.location}: ${address.isEmpty ? t.notSpecified : address}',
           icon: Icons.local_hospital,
           actionText: t.viewDoctors,
           onAction: () => onViewDoctors(name, id),
@@ -134,7 +145,10 @@ class _HospitalsList extends StatelessWidget {
 class _SpecialisationsList extends StatelessWidget {
   final String query;
   final void Function(String spec) onViewDoctors;
-  const _SpecialisationsList({required this.query, required this.onViewDoctors});
+  const _SpecialisationsList({
+    required this.query,
+    required this.onViewDoctors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,14 +162,21 @@ class _SpecialisationsList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: col.snapshots(),
       builder: (ctx, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
         final specs = <String>{};
         for (final d in snap.data!.docs) {
           final s = d['specialization']?.toString() ?? '';
           if (s.toLowerCase().contains(query.toLowerCase())) specs.add(s);
         }
+
         final list = specs.toList()..sort();
         if (list.isEmpty) return Center(child: Text(t.noResults));
+
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: list.length,
@@ -182,11 +203,19 @@ class _DoctorsList extends StatelessWidget {
   final String? hospitalFilterName;
   final String? hospitalFilterId;
   final String? specFilter;
-  const _DoctorsList({required this.query, this.hospitalFilterName, this.hospitalFilterId, this.specFilter});
+  const _DoctorsList({
+    required this.query,
+    this.hospitalFilterName,
+    this.hospitalFilterId,
+    this.specFilter,
+  });
 
   Future<Map<String, String>> _getHospitalInfo(String? hospitalId) async {
-    if (hospitalId == null || hospitalId.isEmpty) return {'name': 'Unknown Hospital', 'address': ''};
-    final doc = await FirebaseFirestore.instance.collection('hospitals').doc(hospitalId).get();
+    if (hospitalId == null || hospitalId.isEmpty) {
+      return {'name': 'Unknown Hospital', 'address': ''};
+    }
+    final doc =
+    await FirebaseFirestore.instance.collection('hospitals').doc(hospitalId).get();
     return {
       'name': doc.data()?['name'] ?? 'Unknown Hospital',
       'address': doc.data()?['address'] ?? '',
@@ -205,7 +234,12 @@ class _DoctorsList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: col.snapshots(),
       builder: (ctx, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
         final docs = snap.data!.docs;
 
         final filtered = docs.where((doc) {
@@ -221,7 +255,9 @@ class _DoctorsList extends StatelessWidget {
             return spec.contains(specFilter!.toLowerCase());
           } else if (query.isNotEmpty) {
             final qText = query.toLowerCase();
-            return name.contains(qText) || spec.contains(qText) || address.contains(qText);
+            return name.contains(qText) ||
+                spec.contains(qText) ||
+                address.contains(qText);
           }
           return true;
         }).toList();
@@ -234,7 +270,7 @@ class _DoctorsList extends StatelessWidget {
                   : specFilter != null
                   ? t.noDoctorsForSpec(specFilter!)
                   : t.noResults,
-              style: const TextStyle(color: Colors.grey),
+              style: const TextStyle(color: AppColors.mid),
             ),
           );
         }
@@ -256,7 +292,9 @@ class _DoctorsList extends StatelessWidget {
               builder: (context, snapshot) {
                 final hosName = snapshot.data?['name'] ?? 'Loading...';
                 final hosAddress = snapshot.data?['address'] ?? '';
-                final location = address.isNotEmpty ? address : (hosAddress.isNotEmpty ? hosAddress : t.notSpecified);
+                final location = address.isNotEmpty
+                    ? address
+                    : (hosAddress.isNotEmpty ? hosAddress : t.notSpecified);
 
                 return _CardTile(
                   title: name,
@@ -264,7 +302,8 @@ class _DoctorsList extends StatelessWidget {
                   '${t.hospital}: $hosName\n${t.specialisation}: ${spec.isEmpty ? t.notSpecified : spec}\n${t.location}: $location',
                   icon: Icons.person,
                   actionText: t.viewShifts,
-                  onAction: () => _showShifts(ctx, doctorId, name, hosName),
+                  onAction: () =>
+                      _showShifts(ctx, doctorId, name, hosName),
                 );
               },
             );
@@ -274,11 +313,16 @@ class _DoctorsList extends StatelessWidget {
     );
   }
 
-  void _showShifts(BuildContext ctx, String doctorId, String doctorName, String hospitalName) {
+  void _showShifts(
+      BuildContext ctx,
+      String doctorId,
+      String doctorName,
+      String hospitalName,
+      ) {
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.light,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -310,8 +354,10 @@ class _DoctorShiftList extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
 
     final now = DateTime.now();
-    final todayStart = Timestamp.fromDate(DateTime(now.year, now.month, now.day));
-    final endDate = Timestamp.fromDate(DateTime(now.year, now.month, now.day + 30));
+    final todayStart =
+    Timestamp.fromDate(DateTime(now.year, now.month, now.day));
+    final endDate = Timestamp.fromDate(
+        DateTime(now.year, now.month, now.day + 30));
 
     final col = FirebaseFirestore.instance
         .collectionGroup('shifts')
@@ -326,12 +372,19 @@ class _DoctorShiftList extends StatelessWidget {
         stream: col.snapshots(),
         builder: (ctx, snap) {
           if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator(color: Colors.teal));
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            );
           }
 
           final docs = snap.data!.docs;
           if (docs.isEmpty) {
-            return Center(child: Text(t.noShifts));
+            return Center(
+              child: Text(
+                t.noShifts,
+                style: const TextStyle(color: AppColors.mid),
+              ),
+            );
           }
 
           return ListView(
@@ -345,13 +398,23 @@ class _DoctorShiftList extends StatelessWidget {
                 future: FirebaseFirestore.instance
                     .collection('appointments')
                     .where('doctorId', isEqualTo: doctorId)
-                    .where('time',
-                    isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(date.year, date.month, date.day)))
-                    .where('time',
-                    isLessThan: Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1)))
+                    .where(
+                  'time',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(
+                    DateTime(date.year, date.month, date.day),
+                  ),
+                )
+                    .where(
+                  'time',
+                  isLessThan: Timestamp.fromDate(
+                    DateTime(date.year, date.month, date.day + 1),
+                  ),
+                )
                     .get(),
                 builder: (ctx, bookedSnap) {
-                  if (!bookedSnap.hasData) return const SizedBox.shrink();
+                  if (!bookedSnap.hasData) {
+                    return const SizedBox.shrink();
+                  }
 
                   final bookedTimes = bookedSnap.data!.docs.map((doc) {
                     final ts = doc['time'] as Timestamp;
@@ -359,25 +422,52 @@ class _DoctorShiftList extends StatelessWidget {
                     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
                   }).toSet();
 
-                  var availableSlots = _generateHourlySlots(start, end)
+                  final availableSlots = _generateHourlySlots(start, end)
                       .where((slot) {
                     final parts = slot.split(':').map(int.parse).toList();
-                    final slotTime =
-                    DateTime(date.year, date.month, date.day, parts[0], parts[1]);
+                    final slotTime = DateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      parts[0],
+                      parts[1],
+                    );
                     return slotTime.isAfter(DateTime.now()) &&
                         !bookedTimes.contains(slot);
-                  })
-                      .toList();
+                  }).toList();
 
                   return ExpansionTile(
-                    title: Text('Date: ${_fmtDate(date)}'),
-                    subtitle: Text(t.slotsAvailable(availableSlots.length.toString())),
+                    title: Text(
+                      'Date: ${_fmtDate(date)}',
+                      style: const TextStyle(
+                        color: AppColors.dark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      t.slotsAvailable(availableSlots.length.toString()),
+                      style: const TextStyle(color: AppColors.mid),
+                    ),
                     children: availableSlots.map((slot) {
                       return ListTile(
-                        title: Text('${t.time}: $slot'),
+                        title: Text(
+                          '${t.time}: $slot',
+                          style: const TextStyle(color: AppColors.dark),
+                        ),
                         trailing: ElevatedButton(
-                          onPressed: () =>
-                              _confirmBook(ctx, slot, doctorId, doctorName, hospitalName, date, d.id),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                          ),
+                          onPressed: () => _confirmBook(
+                            ctx,
+                            slot,
+                            doctorId,
+                            doctorName,
+                            hospitalName,
+                            date,
+                            d.id,
+                          ),
                           child: Text(t.confirm),
                         ),
                       );
@@ -423,20 +513,36 @@ class _DoctorShiftList extends StatelessWidget {
       context: ctx,
       builder: (ctx) => AlertDialog(
         title: Text(t.confirmBooking),
-        content: Text(t.confirmBookingQuestion(
-          doctorName,
-          _fmtDate(date),
-          slot,
-        )),
+        content: Text(
+          t.confirmBookingQuestion(
+            doctorName,
+            _fmtDate(date),
+            slot,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.confirm)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.confirm),
+          ),
         ],
       ),
     );
 
     if (confirm == true) {
-      await _book(ctx, slot, doctorId, doctorName, hospitalName, date, shiftId);
+      await _book(
+        ctx,
+        slot,
+        doctorId,
+        doctorName,
+        hospitalName,
+        date,
+        shiftId,
+      );
     }
   }
 
@@ -454,15 +560,25 @@ class _DoctorShiftList extends StatelessWidget {
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       final fs = FirebaseFirestore.instance;
+
       final patientDoc = await fs.collection('users').doc(uid).get();
       final patientName = patientDoc.data()?['name'] ?? 'Unknown';
+
       final slotParts = slot.split(':').map(int.parse).toList();
-      final dt =
-      DateTime(date.year, date.month, date.day, slotParts[0], slotParts[1]);
+      final dt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        slotParts[0],
+        slotParts[1],
+      );
       final ts = Timestamp.fromDate(dt);
 
-      final startOfDay = Timestamp.fromDate(DateTime(date.year, date.month, date.day));
-      final endOfDay = Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1));
+      final startOfDay =
+      Timestamp.fromDate(DateTime(date.year, date.month, date.day));
+      final endOfDay =
+      Timestamp.fromDate(DateTime(date.year, date.month, date.day + 1));
+
       final sameDayExisting = await fs
           .collection('appointments')
           .where('doctorId', isEqualTo: doctorId)
@@ -504,6 +620,7 @@ class _DoctorShiftList extends StatelessWidget {
       };
 
       final rootRef = await fs.collection('appointments').add(apptData);
+
       await fs
           .collection('users')
           .doc(uid)
@@ -514,7 +631,9 @@ class _DoctorShiftList extends StatelessWidget {
       if (ctx.mounted) {
         Navigator.pop(ctx);
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text(t.appointmentBooked(slot, doctorName))),
+          SnackBar(
+            content: Text(t.appointmentBooked(slot, doctorName)),
+          ),
         );
       }
     } catch (e) {
@@ -528,8 +647,15 @@ class _DoctorShiftList extends StatelessWidget {
 // ---------------- HELPERS ----------------
 class _SnapList extends StatelessWidget {
   final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
-  final Widget Function(BuildContext, QueryDocumentSnapshot<Map<String, dynamic>>) itemBuilder;
-  const _SnapList({required this.stream, required this.itemBuilder});
+  final Widget Function(
+      BuildContext,
+      QueryDocumentSnapshot<Map<String, dynamic>>,
+      ) itemBuilder;
+
+  const _SnapList({
+    required this.stream,
+    required this.itemBuilder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -538,9 +664,15 @@ class _SnapList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (ctx, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
         final docs = snap.data!.docs;
         if (docs.isEmpty) return Center(child: Text(t.noResults));
+
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
@@ -556,6 +688,7 @@ class _CardTile extends StatelessWidget {
   final String title, subtitle, actionText;
   final IconData icon;
   final VoidCallback onAction;
+
   const _CardTile({
     required this.title,
     required this.subtitle,
@@ -566,7 +699,7 @@ class _CardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Colors.teal.shade50;
+    const textColor = AppColors.white;
 
     return PrimaryCard(
       child: Row(
@@ -577,11 +710,17 @@ class _CardTile extends StatelessWidget {
           Expanded(
             child: Text(
               '$title\n$subtitle',
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          PrimaryButton(text: actionText, onPressed: onAction),
+          PrimaryButton(
+            text: actionText,
+            onPressed: onAction,
+          ),
         ],
       ),
     );

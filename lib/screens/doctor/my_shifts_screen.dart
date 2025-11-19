@@ -17,20 +17,24 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F2F3),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D515C),
+        backgroundColor: theme.colorScheme.primary,
         title: Text(
           t.todaysAppointments,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
         elevation: 4,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -43,8 +47,8 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D515C)),
+            return Center(
+              child: CircularProgressIndicator(color: theme.colorScheme.primary),
             );
           }
 
@@ -52,7 +56,7 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             return Center(
               child: Text(
                 "${t.error} ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             );
           }
@@ -61,8 +65,8 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             return Center(
               child: Text(
                 t.noAppointments,
-                style: const TextStyle(
-                  color: Colors.black54,
+                style: TextStyle(
+                  color: theme.hintColor,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -78,34 +82,40 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             itemBuilder: (context, i) {
               final data = appts[i].data() as Map<String, dynamic>;
               final apptId = appts[i].id;
+
               final patientName = (data['patientName'] ?? '-').toString();
               final hospitalName = (data['hospitalName'] ?? '-').toString();
               final ts = data['time'] as Timestamp?;
+
               final apptDateStr = ts != null ? _formatDate(ts.toDate()) : '—';
               final apptTimeStr = ts != null ? _formatTime(ts.toDate()) : '—';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2D515C),
+                  color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: ListTile(
                   title: Text(
                     patientName,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16),
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   subtitle: Text(
                     "${t.date}: $apptDateStr  •  ${t.time}: $apptTimeStr\n${t.hospital}: $hospitalName",
-                    style: const TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                    ),
                   ),
                   trailing: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF2D515C),
+                      backgroundColor: theme.colorScheme.onPrimary,
+                      foregroundColor: theme.colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -125,7 +135,9 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
                     child: Text(
                       t.addUpdateReport,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   contentPadding:
@@ -139,11 +151,15 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
     );
   }
 
+  // ===================== TIME FORMATTER =====================
+
   String _formatTime(DateTime t) {
     final h = t.hour.toString().padLeft(2, '0');
     final m = t.minute.toString().padLeft(2, '0');
     return "$h:$m";
   }
+
+  // ===================== DATE FORMATTER =====================
 
   String _formatDate(DateTime t) {
     final y = t.year.toString().padLeft(4, '0');

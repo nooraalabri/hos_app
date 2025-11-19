@@ -20,6 +20,7 @@ class RegisterDoctorScreen extends StatefulWidget {
 
 class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
   final _form = GlobalKey<FormState>();
+
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
@@ -47,56 +48,16 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
     try {
       final list = await FS.listHospitals(onlyApproved: true);
       if (!mounted) return;
+
       setState(() {
         hospitals = list;
         _fetchingHospitals = false;
       });
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         _error = 'Failed to load hospitals: $e';
         _fetchingHospitals = false;
       });
-    }
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _email.dispose();
-    _pass.dispose();
-    _pass2.dispose();
-    _spec.dispose();
-    super.dispose();
-  }
-
-  Future<void> _notifyHospAdmin({
-    required String doctorName,
-    required String hospAdminEmail,
-    required String hospitalId,
-  }) async {
-    final apiUrl = '${EmailApiConfig.baseUrl}/notify-hospadmin';
-
-    try {
-      final res = await http
-          .post(
-        Uri.parse(apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'doctorName': doctorName,
-          'hospAdminEmail': hospAdminEmail,
-          'hospitalId': hospitalId,
-        }),
-      )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        debugPrint('Email sent successfully.');
-      } else {
-        debugPrint('Failed: ${res.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error: $e');
     }
   }
 
@@ -140,8 +101,8 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
       try {
         final selectedHospital =
         hospitals.firstWhere((h) => h['id'] == hospitalId);
-        final hospEmail = selectedHospital['email']?.toString();
 
+        final hospEmail = selectedHospital['email']?.toString();
         if (hospEmail != null && hospEmail.isNotEmpty) {
           await _notifyHospAdmin(
             doctorName: _name.text.trim(),
@@ -152,7 +113,6 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
       } catch (_) {}
 
       if (!mounted) return;
-
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.pendingApproval,
@@ -165,9 +125,30 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
     }
   }
 
+  Future<void> _notifyHospAdmin({
+    required String doctorName,
+    required String hospAdminEmail,
+    required String hospitalId,
+  }) async {
+    final apiUrl = '${EmailApiConfig.baseUrl}/notify-hospadmin';
+
+    try {
+      await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'doctorName': doctorName,
+          'hospAdminEmail': hospAdminEmail,
+          'hospitalId': hospitalId,
+        }),
+      );
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     if (_fetchingHospitals) {
       return const Scaffold(
@@ -178,6 +159,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
     final noHospitals = hospitals.isEmpty;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -191,12 +173,12 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
 
                 Text(
                   t.registerDoctor,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 20),
 
-                const SizedBox(height: 12),
-
+                // Email
                 AppInput(
                   controller: _email,
                   label: t.email,
@@ -206,21 +188,23 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // Hospital dropdown
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(labelText: t.hospital),
                   value: hospitalId,
                   items: hospitals.map((h) {
                     return DropdownMenuItem<String>(
                       value: h['id'].toString(),
-                      child: Text(h['name']?.toString() ?? ''),
+                      child: Text(h['name'] ?? ''),
                     );
                   }).toList(),
-                  onChanged: noHospitals ? null : (v) => setState(() => hospitalId = v),
-                  validator: (v) =>
-                  noHospitals ? t.noApprovedHospitals : (v != null ? null : t.selectHospital),
+                  onChanged:
+                  noHospitals ? null : (v) => setState(() => hospitalId = v),
+                  validator: (v) => v == null ? t.selectHospital : null,
                 ),
                 const SizedBox(height: 12),
 
+                // Password
                 PasswordInput(
                   controller: _pass,
                   label: t.password,
@@ -232,6 +216,7 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // Confirm Password
                 PasswordInput(
                   controller: _pass2,
                   label: t.confirmPassword,
@@ -243,17 +228,21 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // Full name
                 AppInput(
                   controller: _name,
                   label: t.fullName,
-                  validator: (v) => (v == null || v.isEmpty) ? t.required : null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? t.required : null,
                 ),
                 const SizedBox(height: 12),
 
+                // Specialization
                 AppInput(
                   controller: _spec,
                   label: t.specialization,
-                  validator: (v) => (v == null || v.isEmpty) ? t.required : null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? t.required : null,
                 ),
                 const SizedBox(height: 18),
 
@@ -263,8 +252,8 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
                 ElevatedButton(
                   onPressed: (_submitting || noHospitals) ? null : _submit,
                   child: Padding(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 12),
                     child: _submitting
                         ? const CircularProgressIndicator()
                         : Text(t.signUp),
@@ -281,26 +270,19 @@ class _RegisterDoctorScreenState extends State<RegisterDoctorScreen> {
 
                 const SizedBox(height: 12),
                 Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(t.alreadyHaveAccount),
-                      InkWell(
-                        onTap: () => Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.login,
-                              (_) => false,
-                        ),
-                        child: Text(
-                          t.login,
-                          style: const TextStyle(
-                            decoration: TextDecoration.underline,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  child: InkWell(
+                    onTap: () => Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      AppRoutes.login,
+                          (_) => false,
+                    ),
+                    child: Text(
+                      t.alreadyHaveAccount,
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        decoration: TextDecoration.underline,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],

@@ -55,6 +55,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _submit() async {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     FocusScope.of(context).unfocus();
     setState(() {
@@ -104,8 +105,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(t.password_reset_success),
-            backgroundColor: Colors.green,
+            content: Text(
+              t.password_reset_success,
+              style: TextStyle(color: theme.colorScheme.onPrimary),
+            ),
+            backgroundColor: theme.colorScheme.primary,
           ),
         );
         Navigator.pop(context);
@@ -120,8 +124,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -133,31 +139,44 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   const AppLogo(),
                   const SizedBox(height: 10),
 
-                  Text(t.change_password,
-                      style: Theme.of(context).textTheme.headlineMedium),
+                  Text(
+                    t.change_password,
+                    style: theme.textTheme.headlineMedium!.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+
                   const SizedBox(height: 20),
 
+                  // CURRENT PASSWORD
                   TextFormField(
                     controller: _current,
                     obscureText: true,
                     decoration: InputDecoration(
                       labelText: t.password,
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: Icon(Icons.lock_outline,
+                          color: theme.colorScheme.primary),
                       errorText: _currentErr,
+                      filled: true,
+                      fillColor: theme.inputDecorationTheme.fillColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 12),
 
+                  // NEW PASSWORD
                   PasswordInput(
                     controller: _new1,
-                    label: t.new_password ?? "New Password",
+                    label: t.new_password,
                     validator: (v) => _validateNewPassword(v, t),
                   ),
+
                   const SizedBox(height: 12),
 
+                  // CONFIRM PASSWORD
                   PasswordInput(
                     controller: _new2,
                     label: t.confirm_password,
@@ -172,18 +191,28 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ),
 
+                  // SAVE BUTTON
                   ElevatedButton(
-                    onPressed: _loading ? null : _submit,
-                    child: Padding(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 32, vertical: 12),
-                      child: _loading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(t.save),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _loading ? null : _submit,
+                    child: _loading
+                        ? CircularProgressIndicator(
+                      color: theme.colorScheme.onPrimary,
+                    )
+                        : Text(
+                      t.save,
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
 
@@ -191,7 +220,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(t.back),
+                    child: Text(
+                      t.back,
+                      style:
+                      TextStyle(color: theme.colorScheme.primary),
+                    ),
                   ),
                 ],
               ),

@@ -62,14 +62,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         "https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.latitude}&lon=${pos.longitude}&zoom=18&addressdetails=1";
 
     try {
-      final uri = Uri.parse(url);
       final client = HttpClient();
-
-      // 🔥 IMPORTANT: Nominatim requires a User-Agent!
       client.userAgent =
       "Mozilla/5.0 (compatible; HosApp/1.0; +https://your-domain.com)";
 
-      final request = await client.getUrl(uri);
+      final request = await client.getUrl(Uri.parse(url));
       final response = await request.close();
 
       if (response.statusCode != 200) return "Unknown";
@@ -77,15 +74,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       final jsonStr = await response.transform(utf8.decoder).join();
       final data = jsonDecode(jsonStr);
 
-      // Get readable address
-      if (data["display_name"] != null) {
-        return data["display_name"];
-      }
+      return data["display_name"] ?? "Unknown";
     } catch (e) {
       debugPrint("Reverse Geocode Error: $e");
+      return "Unknown";
     }
-
-    return "Unknown";
   }
 
   // =====================================================
@@ -94,17 +87,26 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.pickLocationOnMap),
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          t.pickLocationOnMap,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
       ),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
 
       body: GoogleMap(
         initialCameraPosition: CameraPosition(
@@ -112,18 +114,21 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           zoom: 15,
         ),
         onMapCreated: (c) => mapController = c,
-        onTap: (pos) {
-          setState(() => selectedPos = pos);
-        },
+        onTap: (pos) => setState(() => selectedPos = pos),
         markers: {
           Marker(
             markerId: const MarkerId("selected"),
             position: selectedPos!,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure,
+            ),
           )
         },
       ),
 
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
         onPressed: () async {
           if (selectedPos == null) return;
 

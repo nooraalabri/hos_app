@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
@@ -30,7 +29,12 @@ class _DoctorHomeState extends State<DoctorHome> {
         .collection('users')
         .doc(widget.doctorId)
         .get();
-    if (doc.exists) setState(() => _doctor = doc.data());
+
+    if (!mounted) return;
+
+    if (doc.exists) {
+      setState(() => _doctor = doc.data());
+    }
   }
 
   Future<void> _editDoctor() async {
@@ -43,10 +47,12 @@ class _DoctorHomeState extends State<DoctorHome> {
     final bioCtrl = TextEditingController(text: _doctor?['bio'] ?? '');
 
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
         title: Text(t.editProfile),
         content: SingleChildScrollView(
           child: Column(
@@ -68,8 +74,9 @@ class _DoctorHomeState extends State<DoctorHome> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(t.cancel)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(t.cancel),
+          ),
           ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance
@@ -82,6 +89,8 @@ class _DoctorHomeState extends State<DoctorHome> {
                 'bio': bioCtrl.text.trim(),
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
+
+              if (!mounted) return;
 
               Navigator.pop(context);
               _loadProfile();
@@ -96,18 +105,34 @@ class _DoctorHomeState extends State<DoctorHome> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.doctorProfile),
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          t.doctorProfile,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
         actions: [
-          IconButton(onPressed: _editDoctor, icon: const Icon(Icons.edit)),
+          IconButton(
+            onPressed: _editDoctor,
+            icon: Icon(Icons.edit, color: theme.colorScheme.onPrimary),
+          ),
         ],
       ),
       drawer: _DoctorDrawer(doctorId: widget.doctorId),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: _doctor == null
-          ? const Center(child: CircularProgressIndicator())
-          : _DoctorProfileBody(data: _doctor!, doctorId: widget.doctorId),
+          ? Center(
+        child: CircularProgressIndicator(
+          color: theme.colorScheme.primary,
+        ),
+      )
+          : _DoctorProfileBody(
+        data: _doctor!,
+        doctorId: widget.doctorId,
+      ),
     );
   }
 }
@@ -121,11 +146,9 @@ class _DoctorProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
-    final status = data['approved'] == true
-        ? t.approved
-        : t.pending;
-
+    final status = data['approved'] == true ? t.approved : t.pending;
     final statusColor =
     data['approved'] == true ? Colors.green : Colors.orange;
 
@@ -133,25 +156,37 @@ class _DoctorProfileBody extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       children: [
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          color: theme.cardColor,
+          shadowColor: theme.shadowColor.withValues(alpha: 0.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 ListTile(
-                  leading: const CircleAvatar(
-                      radius: 26, child: Icon(Icons.person)),
-                  title: Text(data['name'] ?? t.name),
-                  subtitle: Text(data['email'] ?? ''),
+                  leading: CircleAvatar(
+                    radius: 26,
+                    backgroundColor: theme.colorScheme.primary,
+                    child: Icon(
+                      Icons.person,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  ),
+                  title: Text(data['name'] ?? t.name,
+                      style: theme.textTheme.titleMedium),
+                  subtitle: Text(data['email'] ?? '',
+                      style: theme.textTheme.bodyMedium),
                   trailing: Chip(
                     label: Text(status),
-                    backgroundColor: statusColor.withOpacity(.15),
+                    backgroundColor: statusColor.withValues(alpha: 0.15),
                     labelStyle: TextStyle(color: statusColor),
                   ),
                 ),
                 const SizedBox(height: 12),
-                _kv(t.specialization, data['specialization'] ?? '—'),
-                _kv(t.bio, data['bio'] ?? '—'),
+                _kv(t.specialization, data['specialization'] ?? '—', theme),
+                _kv(t.bio, data['bio'] ?? '—', theme),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
@@ -165,11 +200,13 @@ class _DoctorProfileBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        const Divider(),
-        const SizedBox(height: 10),
-        Text(t.quickAccess,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+
+        Text(
+          t.quickAccess,
+          style: theme.textTheme.titleLarge,
+        ),
         const SizedBox(height: 12),
+
         _linkTile(
           context,
           icon: Icons.calendar_today,
@@ -192,39 +229,54 @@ class _DoctorProfileBody extends StatelessWidget {
     );
   }
 
-  Widget _kv(String k, String v) => Padding(
+  Widget _kv(String k, String v, ThemeData theme) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-            width: 120,
-            child: Text(k,
-                style: const TextStyle(fontWeight: FontWeight.w600))),
-        Expanded(child: Text(v)),
+          width: 120,
+          child: Text(
+            k,
+            style: theme.textTheme.titleSmall!
+                .copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: Text(v, style: theme.textTheme.bodyMedium),
+        ),
       ],
     ),
   );
 
   void _showDetails(BuildContext context, Map<String, dynamic> d) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: theme.colorScheme.surface,
       showDragHandle: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       builder: (_) => Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            Text(t.doctorDetails,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(
+              t.doctorDetails,
+              style: theme.textTheme.titleLarge!
+                  .copyWith(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 12),
-            _kv(t.name, d['name'] ?? ''),
-            _kv(t.email, d['email'] ?? ''),
-            _kv(t.specialization, d['specialization'] ?? ''),
-            _kv(t.bio, d['bio'] ?? '—'),
-            _kv(t.status, d['approved'] == true ? t.approved : t.pending),
+            _kv(t.name, d['name'] ?? '', theme),
+            _kv(t.email, d['email'] ?? '', theme),
+            _kv(t.specialization, d['specialization'] ?? '', theme),
+            _kv(t.bio, d['bio'] ?? '—', theme),
+            _kv(
+              t.status,
+              d['approved'] == true ? t.approved : t.pending,
+              theme,
+            ),
           ],
         ),
       ),
@@ -235,12 +287,18 @@ class _DoctorProfileBody extends StatelessWidget {
       {required IconData icon,
         required String title,
         required Widget screen}) {
+    final theme = Theme.of(context);
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF2D515C)),
+        leading: Icon(icon, color: theme.colorScheme.primary),
         title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 18,
+          color: theme.iconTheme.color,
+        ),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => screen),
@@ -257,73 +315,73 @@ class _DoctorDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Drawer(
+      backgroundColor: theme.colorScheme.surface,
       child: ListView(
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF2D515C)),
+            decoration: BoxDecoration(color: theme.colorScheme.primary),
             child: Align(
               alignment: Alignment.bottomLeft,
-              child: Text(t.doctorMenu,
-                  style: const TextStyle(color: Colors.white, fontSize: 20)),
+              child: Text(
+                t.doctorMenu,
+                style: TextStyle(
+                  color: theme.colorScheme.onPrimary,
+                  fontSize: 20,
+                ),
+              ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: Text(t.home),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: Text(t.myShifts),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => MyShiftsScreen(doctorId: doctorId)),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.date_range),
-            title: Text(t.weeklyShifts),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => ShiftsOverviewScreen(doctorId: doctorId)),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.reviews),
-            title: Text(t.reviews),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => ReviewsScreen(doctorId: doctorId)),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: Text(t.settings),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
+          _drawerTile(context, Icons.home, t.home, () {
+            Navigator.pop(context);
+          }),
+          _drawerTile(context, Icons.calendar_today, t.myShifts, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => MyShiftsScreen(doctorId: doctorId)),
+            );
+          }),
+          _drawerTile(context, Icons.date_range, t.weeklyShifts, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ShiftsOverviewScreen(doctorId: doctorId)),
+            );
+          }),
+          _drawerTile(context, Icons.reviews, t.reviews, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ReviewsScreen(doctorId: doctorId)),
+            );
+          }),
+          _drawerTile(context, Icons.settings, t.settings, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          }),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: Text(t.logout),
+            title: Text(t.logout, style: theme.textTheme.bodyMedium),
             onTap: () => AuthService.logoutAndGoWelcome(context),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _drawerTile(
+      BuildContext context, IconData icon, String title, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: Icon(icon, color: theme.iconTheme.color),
+      title: Text(title, style: theme.textTheme.bodyMedium),
+      onTap: onTap,
     );
   }
 }

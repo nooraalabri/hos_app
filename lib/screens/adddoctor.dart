@@ -127,6 +127,7 @@ class _AddDoctorByAdminScreenState extends State<AddDoctorByAdminScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     if (hospitalId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -134,20 +135,13 @@ class _AddDoctorByAdminScreenState extends State<AddDoctorByAdminScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D515C),
-        title: Text('${loc.add_shift} - $hospitalName'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          tooltip: loc.back,
-          onPressed: () {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              AppRoutes.hospitalAdminHome,
-                  (route) => false,
-            );
-          },
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          '${loc.add_shift} - $hospitalName',
+          style: TextStyle(color: theme.colorScheme.onPrimary),
         ),
+        centerTitle: true,
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -159,24 +153,23 @@ class _AddDoctorByAdminScreenState extends State<AddDoctorByAdminScreen> {
               TextFormField(
                 controller: _email,
                 decoration: InputDecoration(labelText: loc.email),
-                validator: (v) => (v == null || !v.contains('@'))
-                    ? loc.invalid_email
-                    : null,
+                validator: (v) =>
+                (v == null || !v.contains('@')) ? loc.invalid_email : null,
               ),
               const SizedBox(height: 12),
+
               TextFormField(
                 controller: _pass,
                 obscureText: true,
                 decoration: InputDecoration(labelText: loc.password),
                 validator: (v) {
                   if (v == null || v.isEmpty) return loc.required_field;
-                  if (!_passRe.hasMatch(v)) {
-                    return loc.weak_password;
-                  }
+                  if (!_passRe.hasMatch(v)) return loc.weak_password;
                   return null;
                 },
               ),
               const SizedBox(height: 12),
+
               TextFormField(
                 controller: _name,
                 decoration: InputDecoration(labelText: loc.fullname),
@@ -184,29 +177,49 @@ class _AddDoctorByAdminScreenState extends State<AddDoctorByAdminScreen> {
                 (v == null || v.isEmpty) ? loc.required_field : null,
               ),
               const SizedBox(height: 12),
+
               TextFormField(
                 controller: _spec,
                 decoration: InputDecoration(labelText: loc.specialization),
                 validator: (v) =>
                 (v == null || v.isEmpty) ? loc.required_field : null,
               ),
+
               const SizedBox(height: 20),
+
               if (_error != null)
                 Text(
                   _error!,
                   style: const TextStyle(color: Colors.red, fontSize: 14),
                 ),
+
               const SizedBox(height: 12),
+
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2D515C),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: _submitting ? null : _submit,
                 child: _submitting
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: theme.colorScheme.onPrimary,
+                    strokeWidth: 2,
+                  ),
+                )
                     : Text(
                   loc.add_shift,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],

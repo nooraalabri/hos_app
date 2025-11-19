@@ -44,6 +44,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     super.dispose();
   }
 
+  // ================= Date Picker =================
   Future<void> _pickDob() async {
     final now = DateTime.now();
     final initial = DateTime(now.year - 18, now.month, now.day);
@@ -64,9 +65,8 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
+  // ================= Submit =================
   Future<void> _submit() async {
-    final t = AppLocalizations.of(context)!;
-
     if (!_form.currentState!.validate()) return;
 
     setState(() {
@@ -102,7 +102,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.patientHome,
-            (route) => false,
+            (_) => false,
       );
     } catch (e) {
       setState(() => _error = e.toString());
@@ -111,9 +111,11 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -126,25 +128,26 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AppLogo(size: 90),
+                const SizedBox(height: 10),
 
                 Text(
                   t.register,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 20),
 
-                // === Name ===
+                // NAME
                 AppInput(
                   controller: _name,
                   label: t.myName,
-                  validator: (v) => (v == null || v.isEmpty) ? t.required : null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? t.required : null,
                 ),
-
                 const SizedBox(height: 12),
 
-                // === DOB ===
+                // DATE OF BIRTH
                 GestureDetector(
                   onTap: _pickDob,
                   child: AbsorbPointer(
@@ -157,10 +160,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
 
-                // === Civil Number ===
+                // CIVIL NUMBER
                 AppInput(
                   controller: _civil,
                   label: t.civilNumber,
@@ -173,21 +175,21 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 12),
 
-                // === Email ===
+                // EMAIL
                 AppInput(
                   controller: _email,
                   label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? t.validEmailRequired : null,
+                  (v == null || !v.contains('@'))
+                      ? t.validEmailRequired
+                      : null,
                 ),
-
                 const SizedBox(height: 12),
 
-                // === Password ===
+                // PASSWORD
                 PasswordInput(
                   controller: _pass,
                   label: t.password,
@@ -197,10 +199,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 12),
 
-                // === Confirm Password ===
+                // CONFIRM PASSWORD
                 PasswordInput(
                   controller: _pass2,
                   label: t.confirmPassword,
@@ -210,50 +211,42 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     return null;
                   },
                 ),
-
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
                 if (_error != null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
 
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: _loading
-                        ? const CircularProgressIndicator()
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : Text(t.signUp),
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 18),
 
-                Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    children: [
-                      Text(t.alreadyHaveAccount),
-                      InkWell(
-                        onTap: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            AppRoutes.login,
-                                (_) => false,
-                          );
-                        },
-                        child: Text(
-                          t.login,
-                          style: const TextStyle(
-                            decoration: TextDecoration.underline,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(t.alreadyHaveAccount),
+                    TextButton(
+                      onPressed: () => Navigator.pushReplacementNamed(
+                        context,
+                        AppRoutes.login,
                       ),
-                    ],
-                  ),
+                      child: Text(t.login),
+                    ),
+                  ],
                 ),
-
-                const SizedBox(height: 12),
               ],
             ),
           ),

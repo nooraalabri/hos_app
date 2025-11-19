@@ -11,7 +11,8 @@ class EnterCodeScreen extends StatefulWidget {
 }
 
 class _EnterCodeScreenState extends State<EnterCodeScreen> {
-  final _c = TextEditingController();
+  final TextEditingController _c = TextEditingController();
+
   String email = '';
   String? err;
   bool checking = false;
@@ -29,27 +30,33 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
   }
 
   Future<void> _verify() async {
-    setState(() => checking = true);
+    setState(() {
+      checking = true;
+      err = null;
+    });
 
     final ok = await OtpService.verify(email, _c.text.trim());
+
+    if (!mounted) return;
 
     setState(() => checking = false);
 
     if (ok) {
-      if (mounted) {
-        Navigator.pushNamed(context, AppRoutes.reset, arguments: email);
-      }
+      Navigator.pushNamed(context, AppRoutes.reset, arguments: email);
     } else {
       setState(() =>
-      err = AppLocalizations.of(context)!.invalidOrExpired);
+      err = AppLocalizations.of(context)!.invalidOrExpired,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -58,14 +65,16 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
             children: [
               const SizedBox(height: 8),
 
-              // عنوان الصفحة
               Text(
                 t.enterRecoveryCode,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
+              // ✔ النسخة المصححة بدون deprecated
               TextField(
                 controller: _c,
                 keyboardType: TextInputType.number,
@@ -74,6 +83,13 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
                 decoration: InputDecoration(
                   counterText: '',
                   hintText: t.hintCode,
+                  filled: true,
+                  fillColor: theme.inputDecorationTheme.fillColor ??
+                      theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
 
@@ -88,13 +104,27 @@ class _EnterCodeScreenState extends State<EnterCodeScreen> {
               const Spacer(),
 
               ElevatedButton(
-                onPressed: checking ? null : _verify,
-                child: Padding(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 36, vertical: 12),
-                  child: checking
-                      ? const CircularProgressIndicator()
-                      : Text(t.send),
+                    horizontal: 36,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: checking ? null : _verify,
+                child: checking
+                    ? CircularProgressIndicator(
+                  color: theme.colorScheme.onPrimary,
+                )
+                    : Text(
+                  t.send,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onPrimary,
+                  ),
                 ),
               ),
 

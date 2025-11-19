@@ -40,7 +40,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       await OtpService
           .sendOtp(email: email, emailApiBaseUrl: EmailApiConfig.baseUrl)
           .timeout(const Duration(seconds: 8), onTimeout: () {
-        // UX: لا نرمي خطأ حتى لو انتهت المهلة
+        // UX - ما نعرض خطأ لو أخذ وقت طويل
       });
 
       if (!mounted) return;
@@ -61,8 +61,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -76,7 +78,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 // العنوان
                 Text(
                   t.forgotPasswordTitle,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -87,7 +91,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? t.enterValidEmail : null,
+                  (v == null || !v.contains('@'))
+                      ? t.enterValidEmail
+                      : null,
                 ),
 
                 const Spacer(),
@@ -103,13 +109,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                 Center(
                   child: ElevatedButton(
-                    onPressed: sending ? null : _send,
-                    child: Padding(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 36, vertical: 12),
-                      child: sending
-                          ? const CircularProgressIndicator()
-                          : Text(t.send),
+                        horizontal: 36,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: sending ? null : _send,
+                    child: sending
+                        ? CircularProgressIndicator(
+                      color: theme.colorScheme.onPrimary,
+                    )
+                        : Text(
+                      t.send,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                      ),
                     ),
                   ),
                 ),

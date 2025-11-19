@@ -10,21 +10,29 @@ class ApproveDoctorsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: FS.hospitalForAdmin(uid),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            ),
           );
         }
 
         if (!snap.hasData || snap.data == null) {
           return Scaffold(
             body: Center(
-              child: Text(t.no_data),
+              child: Text(
+                t.no_data,
+                style: theme.textTheme.bodyMedium,
+              ),
             ),
           );
         }
@@ -32,24 +40,48 @@ class ApproveDoctorsScreen extends StatelessWidget {
         final hospitalId = snap.data!['id'];
 
         return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            title: Text(t.doctor_approval_requests),
+            backgroundColor: theme.colorScheme.primary,
+            title: Text(
+              t.doctor_approval_requests,
+              style: TextStyle(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             centerTitle: true,
+            iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
           ),
+
           body: StreamBuilder(
             stream: FS.pendingDoctorsStream(hospitalId),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: theme.colorScheme.primary,
+                  ),
+                );
               }
+
               if (snap.hasError) {
-                return Center(child: Text("Error: ${snap.error}"));
+                return Center(
+                  child: Text(
+                    "Error: ${snap.error}",
+                    style: theme.textTheme.bodyMedium!
+                        .copyWith(color: theme.colorScheme.error),
+                  ),
+                );
               }
+
               if (!snap.hasData || snap.data!.docs.isEmpty) {
                 return Center(
                   child: Text(
                     t.no_pending_doctors,
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    style: theme.textTheme.bodyLarge!.copyWith(
+                      color: theme.hintColor,
+                    ),
                   ),
                 );
               }
@@ -66,6 +98,8 @@ class ApproveDoctorsScreen extends StatelessWidget {
                   final email = d['email'] ?? '';
 
                   return Card(
+                    color: theme.cardColor,
+                    shadowColor: theme.shadowColor.withValues(alpha:0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -78,20 +112,22 @@ class ApproveDoctorsScreen extends StatelessWidget {
                         children: [
                           Text(
                             name,
-                            style: const TextStyle(
-                              fontSize: 18,
+                            style: theme.textTheme.titleMedium!.copyWith(
                               fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             email,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
+                            style: theme.textTheme.bodyMedium!.copyWith(
+                              color: theme.hintColor,
                             ),
                           ),
+
                           const SizedBox(height: 14),
+
+                          // ===== ACTION BUTTONS =====
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -103,7 +139,6 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                     approve: true,
                                   );
 
-                                  // Email
                                   await NotifyService.sendEmail(
                                     to: email,
                                     subject: t.approved_email_subject,
@@ -113,14 +148,20 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
+                                      backgroundColor:
+                                      theme.colorScheme.primary,
                                       content: Text(
-                                          '${t.doctor_approved_msg} - $name'),
-                                      backgroundColor: Colors.green,
+                                        '${t.doctor_approved_msg} - $name',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onPrimary,
+                                        ),
+                                      ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 10),
                                   shape: RoundedRectangleBorder(
@@ -130,9 +171,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                 child: Text(
                                   t.accept,
                                   style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
 
@@ -153,14 +192,23 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
+                                      backgroundColor:
+                                      theme.colorScheme.errorContainer,
                                       content: Text(
-                                          '${t.doctor_rejected_msg} - $name'),
-                                      backgroundColor: Colors.redAccent,
+                                        '${t.doctor_rejected_msg} - $name',
+                                        style: TextStyle(
+                                          color:
+                                          theme.colorScheme.onErrorContainer,
+                                        ),
+                                      ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor:
+                                  theme.colorScheme.errorContainer,
+                                  foregroundColor:
+                                  theme.colorScheme.onErrorContainer,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 10),
                                   shape: RoundedRectangleBorder(
@@ -170,9 +218,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                 child: Text(
                                   t.reject,
                                   style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ],

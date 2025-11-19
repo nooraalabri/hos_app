@@ -1,4 +1,5 @@
 // lib/patients/medical_reports_page.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +20,11 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
   String? _hospital;
 
   Future<String> _getDoctorName(String doctorId) async {
-    final doc =
-    await FirebaseFirestore.instance.collection('users').doc(doctorId).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(doctorId)
+        .get();
+
     return doc.exists ? (doc.data()?['name'] ?? doctorId) : doctorId;
   }
 
@@ -29,19 +33,20 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
         .collection('appointments')
         .doc(appointmentId)
         .get();
-    if (appoint.exists) {
-      final hospId = appoint.data()?['hospitalId'];
-      if (hospId != null) {
-        final hosp = await FirebaseFirestore.instance
-            .collection('hospitals')
-            .doc(hospId)
-            .get();
-        return hosp.exists
-            ? (hosp.data()?['name'] ?? 'Unknown Hospital')
-            : 'Unknown Hospital';
-      }
-    }
-    return 'Unknown Hospital';
+
+    if (!appoint.exists) return 'Unknown Hospital';
+
+    final hospId = appoint.data()?['hospitalId'];
+    if (hospId == null) return 'Unknown Hospital';
+
+    final hosp = await FirebaseFirestore.instance
+        .collection('hospitals')
+        .doc(hospId)
+        .get();
+
+    return hosp.exists
+        ? (hosp.data()?['name'] ?? 'Unknown Hospital')
+        : 'Unknown Hospital';
   }
 
   @override
@@ -49,61 +54,92 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
     final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final col = FirebaseFirestore.instance
         .collection('reports')
         .where('patientId', isEqualTo: uid)
         .orderBy('createdAt', descending: true);
 
     return AppScaffold(
-      title: t.medicalReports, // "Medical reports"
+      title: t.medicalReports,
       drawer: const PatientDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // ===== Filters =====
-            PrimaryCard(
+            // ===================== FILTERS =====================
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     t.medicalReports,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
                   ),
+
                   const SizedBox(height: 12),
+
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 600;
                       return isWide
-                          ? Row(children: _buildFilters(t))
-                          : Column(children: _buildFilters(t));
+                          ? Row(children: _buildFilters(context, t))
+                          : Column(children: _buildFilters(context, t));
                     },
                   ),
+
                   const SizedBox(height: 12),
-                  PrimaryButton(text: t.send, onPressed: () => setState(() {})),
+
+                  ElevatedButton(
+                    onPressed: () => setState(() {}),
+                    child: Text(t.send),
+                  ),
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
 
-            // ===== Reports list =====
+            // ===================== REPORTS LIST =====================
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: col.snapshots(),
                 builder: (ctx, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF2D515C)));
-                  }
-                  if (!snap.hasData || snap.data!.docs.isEmpty) {
-                    return Center(child: Text(t.noReports));
+                    return Center(
+                      child: CircularProgressIndicator(color: cs.primary),
+                    );
                   }
 
-                  final items = snap.data!.docs.map((e) => e.data()).where((r) {
+                  if (!snap.hasData || snap.data!.docs.isEmpty) {
+                    return Center(
+                      child: Text(
+                        t.noReports,
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final items = snap.data!.docs
+                      .map((e) => e.data())
+                      .where((r) {
                     final createdAt = r['createdAt'];
                     DateTime? date;
+
                     if (createdAt is Timestamp) {
                       date = createdAt.toDate();
                     } else if (createdAt is String) {
@@ -112,21 +148,29 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
 
                     final matchesDay = _day == null ||
                         (date != null &&
-                            date
-                                .toString()
-                                .startsWith(_day!.toString().split(' ').first));
+                            date.toString().startsWith(
+                                _day!.toString().split(' ').first));
 
                     return matchesDay;
-                  }).toList();
+                  })
+                      .toList();
 
                   if (items.isEmpty) {
-                    return Center(child: Text(t.noReports));
+                    return Center(
+                      child: Text(
+                        t.noReports,
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    );
                   }
 
                   return ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (context, i) {
                       final r = items[i];
+
                       return FutureBuilder(
                         future: Future.wait([
                           _getDoctorName(r['doctorId'] ?? ''),
@@ -148,59 +192,77 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
                                   .toLowerCase()
                                   .contains(_hospital!.toLowerCase());
 
-                          if (!matchesHospital) return const SizedBox();
+                          if (!matchesHospital) {
+                            return const SizedBox.shrink();
+                          }
 
                           return Container(
-                            width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2D515C),
+                              color: isDark
+                                  ? cs.surfaceContainerHighest
+                                  : const Color(0xFF2D515C),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black12,
+                                  color:
+                                  cs.shadow.withValues(alpha: 0.15),
                                   blurRadius: 6,
                                   offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
-                            padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   '${t.hospital}: $hospitalName',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: isDark
+                                        ? cs.onSurface
+                                        : Colors.white,
                                     fontSize: 16,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   '${t.doctor}: $doctorName',
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 15),
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? cs.onSurface.withValues(alpha: .7)
+                                        : Colors.white70,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   '${t.report}:',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                    isDark ? cs.onSurface : Colors.white,
+                                  ),
                                 ),
+                                const SizedBox(height: 4),
                                 Text(
                                   r['report'] ?? '-',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? cs.onSurface
+                                        : Colors.white,
                                     height: 1.4,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   '${t.date}: ${(r['createdAt'] is Timestamp) ? (r['createdAt'] as Timestamp).toDate().toString().split(" ").first : "-"}',
-                                  style: const TextStyle(
-                                      color: Colors.white60, fontSize: 13),
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? cs.onSurface.withValues(alpha: .6)
+                                        : Colors.white60,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
@@ -218,37 +280,64 @@ class _MedicalReportsPageState extends State<MedicalReportsPage> {
     );
   }
 
-  List<Widget> _buildFilters(AppLocalizations t) {
+  // ===================== FILTER WIDGETS =====================
+  List<Widget> _buildFilters(BuildContext context, AppLocalizations t) {
+    final cs = Theme.of(context).colorScheme;
+
     return [
+      // ***** Date Filter *****
       Expanded(
         child: InkWell(
           onTap: () async {
-            final d = await showDatePicker(
+            final picked = await showDatePicker(
               context: context,
-              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+              firstDate: DateTime.now().subtract(
+                const Duration(days: 365),
+              ),
               lastDate: DateTime.now(),
               initialDate: _day ?? DateTime.now(),
             );
-            if (d != null) setState(() => _day = d);
+
+            if (picked != null) {
+              setState(() => _day = picked);
+            }
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: cs.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
-              _day == null ? t.appointmentDay : _day!.toString().split(' ').first,
+              _day == null
+                  ? t.appointmentDay
+                  : _day!.toString().split(' ').first,
+              style: TextStyle(color: cs.onSurface),
             ),
           ),
         ),
       ),
+
       const SizedBox(width: 12),
+
+      // ***** Hospital Filter *****
       Expanded(
         child: TextField(
-          decoration: input(t.hospitalName),
-          onChanged: (v) =>
-              setState(() => _hospital = v.trim().isEmpty ? null : v.trim()),
+          decoration: InputDecoration(
+            hintText: t.hospitalName,
+            filled: true,
+            fillColor: cs.surfaceContainerHighest,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          onChanged: (v) {
+            setState(() {
+              _hospital = v.trim().isEmpty ? null : v.trim();
+            });
+          },
         ),
       ),
     ];

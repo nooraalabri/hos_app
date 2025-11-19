@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
-import '../../l10n/app_localizations.dart'; // ✅ لإضافة الترجمة
+import '../../l10n/app_localizations.dart';
 
 class HospitalPatientReportsScreen extends StatefulWidget {
   static const route = '/hospital/patient-reports';
@@ -23,6 +23,7 @@ class _HospitalPatientReportsScreenState
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
+
     FS.hospitalForAdmin(uid).then((d) {
       setState(() => hospId = d?['id']);
     });
@@ -30,11 +31,18 @@ class _HospitalPatientReportsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!; // ✅ متغير الترجمة
+    final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(t.patient_profile)), // ✅ "Patient Reports"
+      appBar: AppBar(
+        title: Text(t.patient_profile),
+        backgroundColor: cs.surface,
+        foregroundColor: cs.onSurface,
+      ),
+
       drawer: const AdminDrawer(),
+
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -47,47 +55,53 @@ class _HospitalPatientReportsScreenState
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return Center(child: Text(t.no_data)); // ✅ "No reports found"
+            return Center(child: Text(t.no_data));
           }
 
           final items = snap.data!.docs
               .map((d) => d.data())
-              .where((r) =>
-          _search == null ||
-              (r['patientName'] ?? '')
-                  .toString()
-                  .toLowerCase()
-                  .contains(_search!.toLowerCase()))
+              .where(
+                (r) =>
+            _search == null ||
+                (r['patientName'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(_search!.toLowerCase()),
+          )
               .toList();
 
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // 🔍 حقل البحث
+                // 🔍 Search
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
-                    hintText: t.search_patient, // ✅ "Search by patient name"
+                    hintText: t.search_patient,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    fillColor: cs.surface.withValues(alpha: 0.2),
                   ),
-                  onChanged: (v) => setState(() =>
-                  _search = v.trim().isEmpty ? null : v.trim()),
+                  onChanged: (v) => setState(
+                        () => _search = v.trim().isEmpty ? null : v.trim(),
+                  ),
                 ),
+
                 const SizedBox(height: 16),
 
-                // 📋 قائمة التقارير
+                // 📋 Reports List
                 Expanded(
                   child: ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (ctx, i) {
                       final r = items[i];
+
                       final date = (r['createdAt'] is Timestamp)
                           ? (r['createdAt'] as Timestamp)
                           .toDate()
@@ -99,6 +113,7 @@ class _HospitalPatientReportsScreenState
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         elevation: 2,
+                        color: cs.surface,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -109,19 +124,46 @@ class _HospitalPatientReportsScreenState
                             children: [
                               Text(
                                 '${t.patient}: ${r['patientName'] ?? t.unknown}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: cs.onSurface,
+                                ),
                               ),
                               const SizedBox(height: 4),
-                              Text('${t.doctor}: ${r['doctorName'] ?? '-'}'),
-                              const SizedBox(height: 4),
+
                               Text(
-                                  '${t.hospital}: ${r['hospitalName'] ?? '-'}'),
+                                '${t.doctor}: ${r['doctorName'] ?? '-'}',
+                                style: TextStyle(
+                                  color: cs.onSurface.withValues(alpha: .8),
+                                ),
+                              ),
                               const SizedBox(height: 4),
+
                               Text(
-                                  '${t.diagnosis ?? "Diagnosis"}: ${r['diagnosis'] ?? '-'}'),
+                                '${t.hospital}: ${r['hospitalName'] ?? '-'}',
+                                style: TextStyle(
+                                  color: cs.onSurface.withValues(alpha: .8),
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text('${t.date ?? "Date"}: $date'),
+
+                              Text(
+                                '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
+                                style: TextStyle(
+                                  color: cs.onSurface.withValues(alpha: .8),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+
+                              Text(
+                                '${t.date}: $date',
+                                style: TextStyle(
+                                  color: cs.onSurface.withValues(alpha: .8),
+                                ),
+                              ),
                             ],
                           ),
                         ),

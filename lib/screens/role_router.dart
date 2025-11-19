@@ -16,10 +16,22 @@ class RoleRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     final user = FirebaseAuth.instance.currentUser;
 
+    // ---------------- Not Logged In ----------------
     if (user == null) {
-      return Scaffold(body: Center(child: Text(t.notLoggedIn)));
+      return Scaffold(
+        backgroundColor: cs.surface,
+        body: Center(
+          child: Text(
+            t.notLoggedIn,
+            style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
+          ),
+        ),
+      );
     }
 
     final stream = FS.users.doc(user.uid).snapshots();
@@ -28,13 +40,24 @@ class RoleRouter extends StatelessWidget {
       stream: stream,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+          return Scaffold(
+            backgroundColor: cs.surface,
+            body: Center(
+              child: CircularProgressIndicator(color: cs.primary),
+            ),
           );
         }
 
         if (!snap.hasData || !snap.data!.exists) {
-          return Scaffold(body: Center(child: Text(t.profileNotFound)));
+          return Scaffold(
+            backgroundColor: cs.surface,
+            body: Center(
+              child: Text(
+                t.profileNotFound,
+                style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
+              ),
+            ),
+          );
         }
 
         final data = snap.data!.data() as Map<String, dynamic>? ?? {};
@@ -57,7 +80,16 @@ class RoleRouter extends StatelessWidget {
             return const HeadAdminHome();
 
           default:
-            return Scaffold(body: Center(child: Text(t.unknownRole)));
+            return Scaffold(
+              backgroundColor: cs.surface,
+              body: Center(
+                child: Text(
+                  t.unknownRole,
+                  style:
+                  theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
+                ),
+              ),
+            );
         }
       },
     );

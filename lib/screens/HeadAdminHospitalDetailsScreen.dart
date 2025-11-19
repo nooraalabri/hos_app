@@ -8,6 +8,7 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     final col = FirebaseFirestore.instance
         .collection('hospitals')
@@ -17,19 +18,27 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           t.hospitalsOverview,
-          style: const TextStyle(color: Color(0xFF2D515C), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF2D515C)),
-        backgroundColor: Colors.white,
+        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        backgroundColor: theme.colorScheme.onPrimaryContainer,
         centerTitle: true,
       ),
-      backgroundColor: const Color(0xFFE6EBEC),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
 
       body: StreamBuilder<QuerySnapshot>(
         stream: col.snapshots(),
         builder: (ctx, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            );
           }
 
           if (snap.hasError) {
@@ -40,7 +49,10 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
             return Center(
               child: Text(
                 t.noApprovedHospitals,
-                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: theme.hintColor,
+                ),
               ),
             );
           }
@@ -60,7 +72,7 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
               final phone = data['phone'] ?? '';
 
               return Card(
-                color: const Color(0xFF2D515C),
+                color: theme.colorScheme.primary,
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -76,8 +88,8 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
                     '${t.email}: $email\n${t.phone}: $phone\n${t.city}: $city',
                     style: const TextStyle(color: Colors.white70),
                   ),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.white),
-
+                  trailing:
+                  const Icon(Icons.chevron_right, color: Colors.white),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -135,25 +147,30 @@ class HospitalStatsDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "${hospName} ${t.hospitalStats}",
-          style: const TextStyle(color: Color(0xFF2D515C)),
+          "$hospName ${t.hospitalStats}",
+          style: TextStyle(color: theme.colorScheme.primary),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF2D515C)),
-        backgroundColor: Colors.white,
+        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        backgroundColor: theme.colorScheme.onPrimaryContainer,
         centerTitle: true,
       ),
 
-      backgroundColor: const Color(0xFFE6EBEC),
+      backgroundColor: theme.scaffoldBackgroundColor,
 
       body: FutureBuilder<Map<String, int>>(
         future: _load(),
         builder: (ctx, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
+            );
           }
 
           if (snap.hasError) {
@@ -170,13 +187,13 @@ class HospitalStatsDetails extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             children: [
               _statTile(t.doctors, data['doctors'] ?? 0,
-                  Icons.medical_information, Colors.blue),
+                  Icons.medical_information, theme.colorScheme.primary),
 
               _statTile(t.patients, data['patients'] ?? 0,
-                  Icons.people, Colors.purple),
+                  Icons.people, theme.colorScheme.secondary),
 
               _statTile(t.appointments, data['appointments'] ?? 0,
-                  Icons.event, Colors.teal),
+                  Icons.event, theme.colorScheme.tertiary),
             ],
           );
         },
@@ -184,19 +201,26 @@ class HospitalStatsDetails extends StatelessWidget {
     );
   }
 
-  Widget _statTile(String title, int value, IconData icon, Color color) {
+  Widget _statTile(
+      String title, int value, IconData icon, Color color) {
+    final textColor =
+    ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+        ? Colors.white
+        : Colors.black;
+
     return Card(
       color: color,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
-        leading: Icon(icon, color: Colors.white),
+        leading: Icon(icon, color: textColor),
         title: Text(
           title,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style:
+          TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         trailing: Text(
           "$value",
-          style: const TextStyle(color: Colors.white, fontSize: 20),
+          style: TextStyle(color: textColor, fontSize: 20),
         ),
       ),
     );

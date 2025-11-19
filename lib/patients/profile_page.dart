@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
-import 'patient_drawer.dart';
 import 'qr_page.dart';
 import 'ui.dart';
 
@@ -62,12 +61,14 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   Future<void> _pickDob() async {
     final now = DateTime.now();
     final minAllowed = now.subtract(const Duration(days: 7));
+
     final picked = await showDatePicker(
       context: context,
       initialDate: now.subtract(const Duration(days: 365 * 20)),
       firstDate: DateTime(1900),
       lastDate: minAllowed,
     );
+
     if (picked != null) {
       _dob.text =
       '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
@@ -78,59 +79,42 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   Future<void> _save(String uid) async {
     final t = AppLocalizations.of(context)!;
     setState(() => _saving = true);
+
     try {
-      // Civil number
       final civil = _civil.text.trim();
       if (civil.length != 8 || int.tryParse(civil) == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.civilMustBe8Digits)),
-        );
-        setState(() => _saving = false);
+        _snack(t.civilMustBe8Digits);
         return;
       }
 
-      // Phone
       final phone = _phone.text.trim();
       final phoneReg = RegExp(r'^[79]\d{7}$');
       if (!phoneReg.hasMatch(phone)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.phoneMustStartWith7or9)),
-        );
-        setState(() => _saving = false);
+        _snack(t.phoneMustStartWith7or9);
         return;
       }
 
-      // Weight & Height
-      final int? weight = int.tryParse(_weight.text.trim());
-      final int? height = int.tryParse(_height.text.trim());
+      final weight = int.tryParse(_weight.text.trim());
+      final height = int.tryParse(_height.text.trim());
+
       if (weight == null ||
           height == null ||
           weight <= 0 ||
           height <= 0 ||
           weight > 999 ||
           height > 999) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.weightHeightInvalid)),
-        );
-        setState(() => _saving = false);
+        _snack(t.weightHeightInvalid);
         return;
       }
 
-      // DOB
       final dobDate = DateTime.tryParse(_dob.text.trim());
       if (dobDate == null ||
           dobDate.isAfter(DateTime.now().subtract(const Duration(days: 7)))) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.dob7days)),
-        );
-        setState(() => _saving = false);
+        _snack(t.dob7days);
         return;
       }
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .set({
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'name': _name.text.trim(),
         'civilNumber': civil,
         'dob': _dob.text.trim(),
@@ -143,31 +127,35 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
 
       if (mounted) {
         setState(() => _edit = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(t.profileUpdated)));
+        _snack(t.profileUpdated);
         _futureProfile =
             FirebaseFirestore.instance.collection('users').doc(uid).get();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${t.error}: $e')),
-      );
+      _snack('${t.error}: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    setState(() => _saving = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    final cs = Theme.of(context).colorScheme;
 
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+    return FutureBuilder(
       future: _futureProfile,
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         if (!snap.hasData || !snap.data!.exists) {
           return Center(child: Text(t.profileNotFound));
         }
@@ -180,13 +168,18 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
         if (_civil.text.isEmpty) _civil.text = data['civilNumber'] ?? '';
         if (_dob.text.isEmpty) _dob.text = data['dob'] ?? '';
         if (_phone.text.isEmpty) _phone.text = data['phone'] ?? '';
+
         if (_weight.text.isEmpty) {
           _weight.text = data['weight']?.toString() ?? '';
         }
+
         if (_height.text.isEmpty) {
           _height.text = data['height']?.toString() ?? '';
         }
-        if (_bloodType.isEmpty) _bloodType = data['bloodType'] ?? '';
+
+        if (_bloodType.isEmpty) {
+          _bloodType = data['bloodType'] ?? '';
+        }
 
         _chronic.text =
             ((data['chronic'] as List?)?.cast<String>() ?? []).join(', ');
@@ -213,55 +206,46 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                       IconButton(
                         icon: Icon(
                           _edit ? Icons.close : Icons.edit,
-                          color: Colors.white,
+                          color: cs.primary,
                         ),
                         onPressed: () => setState(() => _edit = !_edit),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 14),
 
-                  Text(
-                    t.personalInfo,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
+                  Text(t.personalInfo,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
 
-                  _infoBox(t, email),
+                  _infoBox(t, email, cs),
 
                   const SizedBox(height: 16),
 
-                  Text(
-                    t.medicalInfoDoctorOnly,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
+                  Text(t.medicalInfoDoctorOnly,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
 
-                  _medicalBox(t),
+                  _medicalBox(t, cs),
 
                   const SizedBox(height: 20),
 
-                  if (_edit) _editSection(uid, t),
+                  if (_edit) _editSection(uid, t, cs),
 
                   if (!_edit)
                     Align(
                       alignment: Alignment.centerRight,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          backgroundColor: Colors.white,
-                        ),
+                      child: PrimaryButton(
+                        filled: false,
+                        text: t.showQr,
                         onPressed: () => Navigator.pushNamed(
                           context,
                           QRPage.route,
-                          arguments: {
-                            ...data,
-                            'uid': uid,
-                          },
+                          arguments: {...data, 'uid': uid},
                         ),
-                        child: Text(t.showQr),
                       ),
                     ),
                 ],
@@ -273,127 +257,98 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
     );
   }
 
-  Widget _infoBox(AppLocalizations t, String email) {
+  Widget _infoBox(AppLocalizations t, String email, ColorScheme cs) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          _row(t.name, _name.text),
-          _row(t.civilNumber, _civil.text),
-          _row(t.dob, _dob.text),
-          _row(t.email, email),
-          _row(t.phone, _phone.text),
-          _row(t.weight, _weight.text),
-          _row(t.height, _height.text),
-          _row(t.bloodType, _bloodType),
+          _row(t.name, _name.text, cs),
+          _row(t.civilNumber, _civil.text, cs),
+          _row(t.dob, _dob.text, cs),
+          _row(t.email, email, cs),
+          _row(t.phone, _phone.text, cs),
+          _row(t.weight, _weight.text, cs),
+          _row(t.height, _height.text, cs),
+          _row(t.bloodType, _bloodType, cs),
         ],
       ),
     );
   }
 
-  Widget _medicalBox(AppLocalizations t) {
+  Widget _medicalBox(AppLocalizations t, ColorScheme cs) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          _row(t.chronicDiseases, _chronic.text),
-          _row(t.allergies, _allergy.text),
-          _row(t.medications, _meds.text),
-          _row(t.condition, _condition.text),
+          _row(t.chronicDiseases, _chronic.text, cs),
+          _row(t.allergies, _allergy.text, cs),
+          _row(t.medications, _meds.text, cs),
+          _row(t.condition, _condition.text, cs),
         ],
       ),
     );
   }
 
-  Widget _editSection(String uid, AppLocalizations t) {
+  Widget _editSection(String uid, AppLocalizations t, ColorScheme cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Divider(color: Colors.white30, height: 30),
-        Text(
-          t.editPersonalInfo,
-          style: const TextStyle(
-              fontWeight: FontWeight.w600, color: Colors.white),
-        ),
+        Divider(color: cs.outline, height: 30),
 
-        _field(t.name, _name),
-        _field(t.civilNumber, _civil, keyboardType: TextInputType.number),
+        _field(t.name, _name, cs),
+        _field(t.civilNumber, _civil, cs, keyboardType: TextInputType.number),
 
         GestureDetector(
           onTap: _pickDob,
-          child: AbsorbPointer(child: _field(t.dob, _dob)),
+          child: AbsorbPointer(child: _field(t.dob, _dob, cs)),
         ),
 
-        _field(t.phone, _phone, keyboardType: TextInputType.phone),
-        _field(t.weight, _weight, keyboardType: TextInputType.number),
-        _field(t.height, _height, keyboardType: TextInputType.number),
+        _field(t.phone, _phone, cs, keyboardType: TextInputType.phone),
+        _field(t.weight, _weight, cs, keyboardType: TextInputType.number),
+        _field(t.height, _height, cs, keyboardType: TextInputType.number),
 
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 12),
           child: DropdownButtonFormField<String>(
             value: _bloodType.isEmpty ? null : _bloodType,
             items: bloodTypes
-                .map(
-                  (type) => DropdownMenuItem(
-                value: type,
-                child: Text(type,
-                    style: const TextStyle(color: Colors.white)),
-              ),
-            )
+                .map((type) => DropdownMenuItem(
+              value: type,
+              child: Text(type),
+            ))
                 .toList(),
             onChanged: (val) => setState(() => _bloodType = val ?? ''),
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
             decoration: InputDecoration(
               labelText: t.bloodType,
-              labelStyle: const TextStyle(color: Colors.white70),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.1),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.white70)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                  BorderSide(color: AppColors.primary, width: 2)),
+              fillColor: cs.surfaceContainerHighest,
+              border:
+              OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            dropdownColor: const Color(0xFF2D515C),
-            style: const TextStyle(color: Colors.white),
           ),
         ),
 
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
 
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            OutlinedButton(
+            PrimaryButton(
+              filled: false,
+              text: t.cancel,
               onPressed: () => setState(() => _edit = false),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white70),
-                foregroundColor: Colors.white,
-              ),
-              child: Text(t.cancel),
             ),
-            ElevatedButton(
+            PrimaryButton(
+              text: _saving ? t.saving : t.save,
               onPressed: _saving ? null : () => _save(uid),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 10),
-              ),
-              child: Text(_saving ? t.saving : t.save),
             ),
           ],
         ),
@@ -401,49 +356,38 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
     );
   }
 
-  Widget _field(String label, TextEditingController c,
-      {TextInputType? keyboardType, int maxLines = 1}) {
+  Widget _field(String label, TextEditingController c, ColorScheme cs,
+      {TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: c,
         keyboardType: keyboardType,
-        maxLines: maxLines,
-        style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.1),
+          fillColor: cs.surfaceContainerHighest,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.white)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.white70)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-              BorderSide(color: AppColors.primary, width: 2)),
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
   }
 
-  Widget _row(String key, String val) {
+  Widget _row(String key, String val, ColorScheme cs) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           SizedBox(
-            width: 160,
-            child: Text(key, style: const TextStyle(color: Colors.white70)),
+            width: 150,
+            child: Text(key, style: TextStyle(color: cs.onSurface)),
           ),
           Expanded(
             child: Text(
               val.isEmpty ? '—' : val,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: Colors.white),
+              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
             ),
           ),
         ],

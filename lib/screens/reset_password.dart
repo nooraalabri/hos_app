@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../l10n/app_localizations.dart';
-
 import '../routes.dart';
 import '../widgets/app_logo.dart';
 
@@ -22,19 +21,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? err;
 
   final RegExp _passRe = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$');
-
-  String? _validatePassword(String? v, AppLocalizations t) {
-    if (v == null || v.isEmpty) return t.passwordRequired;
-    if (!_passRe.hasMatch(v)) return t.passwordRules;
-    return null;
-  }
-
-  String? _validateConfirm(String? v, AppLocalizations t) {
-    if (v == null || v.isEmpty) return t.confirmPasswordRequired;
-    if (v != _p1.text) return t.passwordsNotMatch;
-    return null;
-  }
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*()_\-+=\[\]{};:"\\|,.<>\/?]).{8,}$',
+  );
 
   @override
   void didChangeDependencies() {
@@ -49,20 +37,35 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
+  // ===== Validators =====
+  String? _validatePassword(String? v, AppLocalizations t) {
+    if (v == null || v.isEmpty) return t.passwordRequired;
+    if (!_passRe.hasMatch(v)) return t.passwordRules;
+    return null;
+  }
+
+  String? _validateConfirm(String? v, AppLocalizations t) {
+    if (v == null || v.isEmpty) return t.confirmPasswordRequired;
+    if (v != _p1.text) return t.passwordsNotMatch;
+    return null;
+  }
+
+  // ===== Submit =====
   Future<void> _submit() async {
     final t = AppLocalizations.of(context)!;
 
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      err = null;
       saving = true;
+      err = null;
     });
 
     try {
       final auth = FirebaseAuth.instance;
       final user = auth.currentUser;
 
+      // المحاولة رقم 1: تحديث كلمة المرور مباشرة
       if (user != null) {
         try {
           await user.updatePassword(_p1.text.trim());
@@ -73,9 +76,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           );
 
           Navigator.pushNamedAndRemoveUntil(
-              context, AppRoutes.login, (_) => false);
+            context,
+            AppRoutes.login,
+                (_) => false,
+          );
           return;
-
         } on FirebaseAuthException catch (e) {
           if (e.code != 'requires-recent-login') {
             setState(() => err = e.message ?? e.code);
@@ -84,7 +89,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         }
       }
 
-      // No user or recent login required → send reset link
+      // المحاولة رقم 2: إرسال رابط إعادة التعيين
       if (email.isNotEmpty) {
         await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
@@ -98,7 +103,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
-            context, AppRoutes.login, (_) => false);
+          context,
+          AppRoutes.login,
+              (_) => false,
+        );
       }
 
     } catch (e) {
@@ -108,11 +116,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
   }
 
+  // ===== UI =====
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -122,16 +134,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AppLogo(),
+                const AppLogo(size: 90),
+                const SizedBox(height: 10),
 
                 Text(
                   t.resetPasswordTitle,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: cs.onSurface,
+                  ),
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
 
+                // New Password
                 TextFormField(
                   controller: _p1,
                   obscureText: true,
@@ -141,9 +157,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   validator: (v) => _validatePassword(v, t),
                 ),
+                const SizedBox(height: 14),
 
-                const SizedBox(height: 12),
-
+                // Confirm Password
                 TextFormField(
                   controller: _p2,
                   obscureText: true,
@@ -155,31 +171,37 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
 
                 const SizedBox(height: 8),
-
                 Text(
                   t.passwordHintText,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-
-                const SizedBox(height: 12),
-
-                if (err != null)
-                  Text(err!, style: const TextStyle(color: Colors.red)),
-
-                const SizedBox(height: 12),
-
-                ElevatedButton(
-                  onPressed: saving ? null : _submit,
-                  child: Padding(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 36, vertical: 12),
-                    child: saving
-                        ? const CircularProgressIndicator()
-                        : Text(t.update),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurface.withValues(alpha:.6),
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
+
+                if (err != null)
+                  Text(
+                    err!,
+                    style: TextStyle(color: cs.error),
+                  ),
+
+                const SizedBox(height: 14),
+
+                // BUTTON
+                ElevatedButton(
+                  onPressed: saving ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: saving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(t.update),
+                ),
+
+                const SizedBox(height: 30),
               ],
             ),
           ),
