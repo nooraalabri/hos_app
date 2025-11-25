@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -22,10 +21,14 @@ class _HospitalDoctorReportsScreenState
   @override
   void initState() {
     super.initState();
-    final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    FS.hospitalForAdmin(uid).then((d) {
-      setState(() => hospId = d?['id']);
+    // === GET hospitalId FROM USERS ===
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    FS.users.doc(uid).get().then((doc) {
+      if (doc.exists) {
+        final hid = doc.data()?['hospitalId'];
+        if (mounted) setState(() => hospId = hid);
+      }
     });
   }
 
@@ -36,11 +39,16 @@ class _HospitalDoctorReportsScreenState
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(); // يرجع للصفحة السابقة
+          },
+        ),
         title: Text(t.doctor_profile),
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
       ),
-      drawer: const AdminDrawer(),
 
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
@@ -75,7 +83,7 @@ class _HospitalDoctorReportsScreenState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // 🔍 Search
+                // ===== SEARCH BOX =====
                 TextField(
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
@@ -94,7 +102,7 @@ class _HospitalDoctorReportsScreenState
 
                 const SizedBox(height: 16),
 
-                // 🩺 Doctors List
+                // ===== DOCTORS LIST =====
                 Expanded(
                   child: ListView.builder(
                     itemCount: doctors.length,
@@ -154,7 +162,8 @@ class _HospitalDoctorReportsScreenState
                                     email,
                                     style: TextStyle(
                                       color: cs.onSurface
-                                          .withValues(alpha: .8),
+                                          .withValues(
+                                          alpha: .8),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -162,7 +171,8 @@ class _HospitalDoctorReportsScreenState
                                     '${t.specialization}: $specialization',
                                     style: TextStyle(
                                       color: cs.onSurface
-                                          .withValues(alpha: .8),
+                                          .withValues(
+                                          alpha: .8),
                                     ),
                                   ),
                                   const SizedBox(height: 12),
@@ -174,8 +184,8 @@ class _HospitalDoctorReportsScreenState
                                     children: [
                                       _statBox(context,
                                           t.appointments, total),
-                                      _statBox(context, t.completed,
-                                          completed),
+                                      _statBox(context,
+                                          t.completed, completed),
                                     ],
                                   ),
                                 ],
@@ -195,6 +205,7 @@ class _HospitalDoctorReportsScreenState
     );
   }
 
+  // ===== STAT BOX =====
   Widget _statBox(BuildContext context, String title, int value) {
     final cs = Theme.of(context).colorScheme;
 
@@ -217,7 +228,10 @@ class _HospitalDoctorReportsScreenState
           const SizedBox(height: 4),
           Text(
             value.toString(),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(
               color: cs.onPrimary,
               fontWeight: FontWeight.bold,
             ),

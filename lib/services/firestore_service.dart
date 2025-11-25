@@ -41,22 +41,20 @@ class FS {
     );
   }
 
-  // =======================================================================
-  // ======================== H O S P I T A L S =============================
-  // =======================================================================
+  // ======================== HOSPITALS ====================================
 
   static Future<void> createHospital({
     required String uid,
     required String name,
     required String email,
-    Map<String, dynamic>? data, // يحتوي: phone, website, licenseNumber, crNumber, location, lat, lng
+    Map<String, dynamic>? data,
   }) async {
     final hospitalData = {
       'name': name,
       'email': email,
-      'status': 'pending', // new
+      'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
-      ...?data, // دمج بيانات: phone, website, lat, lng, licenseNumber, crNumber...
+      ...?data,
     };
 
     await hospitals.doc(uid).set(hospitalData);
@@ -98,10 +96,21 @@ class FS {
     return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
   }
 
+  // 🔥 مهم: إصلاح جلب hospitalId للإدمن
   static Future<Map<String, dynamic>?> hospitalForAdmin(String adminUid) async {
-    final doc = await hospitals.doc(adminUid).get();
-    if (!doc.exists) return null;
-    return {'id': doc.id, ...doc.data()!};
+    final userDoc = await users.doc(adminUid).get();
+    if (!userDoc.exists) return null;
+
+    final hid = userDoc.data()?['hospitalId'];
+    if (hid == null || hid.toString().isEmpty) return null;
+
+    final hospDoc = await hospitals.doc(hid).get();
+    if (!hospDoc.exists) return null;
+
+    return {
+      'id': hospDoc.id,
+      ...hospDoc.data()!,
+    };
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> pendingHospitalsStream() {
@@ -139,9 +148,7 @@ class FS {
     }
   }
 
-  // =======================================================================
-  // ========================= D O C T O R S ===============================
-  // =======================================================================
+  // ======================== DOCTORS ======================================
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorsStream(
       String hospitalId, {
@@ -191,9 +198,7 @@ class FS {
     await users.doc(doctorUid).delete();
   }
 
-  // =======================================================================
   // ============================ OTP ======================================
-  // =======================================================================
 
   static Future<void> saveOtp(
       String email,
@@ -230,9 +235,7 @@ class FS {
     return ok;
   }
 
-  // =======================================================================
   // ======================= MEDICAL REPORTS ================================
-  // =======================================================================
 
   static Future<void> addMedicalReport(
       String appointmentId,
@@ -307,48 +310,66 @@ class FS {
     await batch.commit();
   }
 
-  // =======================================================================
-  // ====================== HOSPITAL STATS =================================
-  // =======================================================================
+  // ====================== HOSPITAL STATS (FIXED) =========================
 
   static Future<Map<String, int>> statsForHospital(
       String hospitalId,
       String periodKey,
       ) async {
+
     final now = DateTime.now();
-    late DateTime start, end;
+    late DateTime start;
 
     switch (periodKey) {
       case 'weekly':
         start = _weekStart(now);
-        end = _weekEnd(now);
         break;
       case 'monthly':
         start = DateTime(now.year, now.month, 1);
-        end = DateTime(now.year, now.month + 1, 1);
         break;
       case 'yearly':
         start = DateTime(now.year, 1, 1);
-        end = DateTime(now.year + 1, 1, 1);
         break;
       default:
         start = _weekStart(now);
-        end = _weekEnd(now);
     }
 
-    final q = appointments
+    // ===== 1) GET ALL DOCTORS IN THIS HOSPITAL =====
+    final doctorSnap = await users
+        .where('role', isEqualTo: 'doctor')
         .where('hospitalId', isEqualTo: hospitalId)
-        .where('time', isGreaterThanOrEqualTo: start)
-        .where('time', isLessThan: end)
-        .where('status', whereIn: [
-      'booked',
-      'checked_in',
-      'completed',
-    ]);
+        .get();
 
-    final snap = await q.get();
-    final items = snap.docs;
+    final doctorIds = doctorSnap.docs.map((d) => d.id).toList();
 
+    if (doctorIds.isEmpty) {
+      return {'new': 0, 'appointments': 0, 'visits': 0};
+    }
+
+    // ===== 2) GET ALL APPOINTMENTS FOR THESE DOCTORS =====
+    // NOTE: Firestore allows only 10 elements in whereIn
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> apps = [];
+
+    const maxBatch = 10;
+    for (int i = 0; i < doctorIds.length; i += maxBatch) {
+      final batch = doctorIds.skip(i).take(maxBatch).toList();
+
+      final snap = await appointments
+          .where('doctorId', whereIn: batch)
+          .get();
+
+      apps.addAll(snap.docs);
+    }
+
+    // ===== 3) FILTER BY DATE =====
+    final items = apps.where((d) {
+      final ts = d['time'];
+      if (ts is! Timestamp) return false;
+      final date = ts.toDate();
+      return date.isAfter(start);
+    }).toList();
+
+    // ===== 4) CALCULATIONS =====
     final int appointmentsCount = items.length;
     final int visitsCount =
         items.where((d) => d['status'] == 'completed').length;
@@ -366,10 +387,8 @@ class FS {
     };
   }
 
-  // =======================================================================
-  // ==================== HEAD ADMIN STATS =================================
-  // =======================================================================
 
+  // ==================== HEAD ADMIN STATS ================================
   static Future<Map<String, int>> statsForHeadAdmin({
     required ReportPeriod period,
   }) async {
@@ -406,14 +425,19 @@ class FS {
     _count(hospitals.where('status', isEqualTo: 'pending'));
 
     final doctorsApprovedF = _count(
-      users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: true),
+      users
+          .where('role', isEqualTo: 'doctor')
+          .where('approved', isEqualTo: true),
     );
 
     final doctorsPendingF = _count(
-      users.where('role', isEqualTo: 'doctor').where('approved', isEqualTo: false),
+      users
+          .where('role', isEqualTo: 'doctor')
+          .where('approved', isEqualTo: false),
     );
 
-    final patientsTotalF = _count(users.where('role', isEqualTo: 'patient'));
+    final patientsTotalF =
+    _count(users.where('role', isEqualTo: 'patient'));
 
     final newUsersF = _count(
       users
@@ -473,19 +497,15 @@ class FS {
     };
   }
 
-  // =======================================================================
-  // ======================== REVIEWS & SHIFTS ==============================
-  // =======================================================================
+  // ======================== Reviews & Shifts ==============================
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorReviews(
-      String doctorId,
-      ) {
+      String doctorId) {
     return reviews.where('doctorId', isEqualTo: doctorId).snapshots();
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsDaily(
-      String doctorId,
-      ) {
+      String doctorId) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 1));
@@ -500,8 +520,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsWeekly(
-      String doctorId,
-      ) {
+      String doctorId) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 7));
@@ -516,8 +535,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> doctorShiftsMonthly(
-      String doctorId,
-      ) {
+      String doctorId) {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 30));
@@ -532,8 +550,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> hospitalUpcomingShifts(
-      String hospitalId,
-      ) {
+      String hospitalId) {
     final todayStart = _ts(_dayStart(DateTime.now()));
 
     return hospitals
@@ -544,9 +561,7 @@ class FS {
         .snapshots();
   }
 
-  // =======================================================================
-  // ========================= PATIENTS ====================================
-  // =======================================================================
+  // ============================ PATIENTS ================================
 
   static Future<Map<String, dynamic>?> getPatientProfile(String uid) async {
     final doc = await users.doc(uid).get();
@@ -590,8 +605,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> patientAppointments(
-      String uid,
-      ) {
+      String uid) {
     return users
         .doc(uid)
         .collection('appointments')
@@ -600,8 +614,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> patientReports(
-      String uid,
-      ) {
+      String uid) {
     return users
         .doc(uid)
         .collection('reports')
@@ -623,13 +636,10 @@ class FS {
     return q.orderBy('createdAt', descending: true).snapshots();
   }
 
-  // =======================================================================
-  // ========================== SEARCH =====================================
-  // =======================================================================
+  // ============================ SEARCH ==================================
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> searchHospitals(
-      String query,
-      ) {
+      String query) {
     return hospitals
         .where('status', isEqualTo: 'approved')
         .orderBy('name')
@@ -639,8 +649,7 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> searchDoctors(
-      String query,
-      ) {
+      String query) {
     return users
         .where('role', isEqualTo: 'doctor')
         .orderBy('name')

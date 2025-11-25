@@ -21,7 +21,7 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
       appBar: AppBar(
         backgroundColor: theme.colorScheme.primary,
         title: Text(
-          t.reports,
+          "Dashboard",   // ←← تم التغيير هنا
           style: TextStyle(color: theme.colorScheme.onPrimary),
         ),
         iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
@@ -144,8 +144,7 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
     );
   }
 
-
-  //--------------- STAT CARD  -----------------
+  //--------------- STAT CARD -----------------
 
   Widget _statCard(
       BuildContext context,
@@ -154,7 +153,6 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
       IconData icon,
       Color bgColor,
       ) {
-    // تحديد لون النص تلقائي حسب سطوع الخلفية
     final textColor =
     ThemeData.estimateBrightnessForColor(bgColor) == Brightness.dark
         ? Colors.white

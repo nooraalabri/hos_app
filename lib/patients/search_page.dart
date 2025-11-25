@@ -214,8 +214,10 @@ class _DoctorsList extends StatelessWidget {
     if (hospitalId == null || hospitalId.isEmpty) {
       return {'name': 'Unknown Hospital', 'address': ''};
     }
-    final doc =
-    await FirebaseFirestore.instance.collection('hospitals').doc(hospitalId).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('hospitals')
+        .doc(hospitalId)
+        .get();
     return {
       'name': doc.data()?['name'] ?? 'Unknown Hospital',
       'address': doc.data()?['address'] ?? '',
@@ -302,8 +304,13 @@ class _DoctorsList extends StatelessWidget {
                   '${t.hospital}: $hosName\n${t.specialisation}: ${spec.isEmpty ? t.notSpecified : spec}\n${t.location}: $location',
                   icon: Icons.person,
                   actionText: t.viewShifts,
-                  onAction: () =>
-                      _showShifts(ctx, doctorId, name, hosName),
+                  onAction: () => _showShifts(
+                    ctx,
+                    doctorId,
+                    name,
+                    hosId,
+                    hosName,
+                  ),
                 );
               },
             );
@@ -317,6 +324,7 @@ class _DoctorsList extends StatelessWidget {
       BuildContext ctx,
       String doctorId,
       String doctorName,
+      String hospitalId,
       String hospitalName,
       ) {
     showModalBottomSheet(
@@ -330,6 +338,7 @@ class _DoctorsList extends StatelessWidget {
         return _DoctorShiftList(
           doctorId: doctorId,
           doctorName: doctorName,
+          hospitalId: hospitalId,
           hospitalName: hospitalName,
         );
       },
@@ -341,11 +350,13 @@ class _DoctorsList extends StatelessWidget {
 class _DoctorShiftList extends StatelessWidget {
   final String doctorId;
   final String doctorName;
+  final String hospitalId;
   final String hospitalName;
 
   const _DoctorShiftList({
     required this.doctorId,
     required this.doctorName,
+    required this.hospitalId,
     required this.hospitalName,
   });
 
@@ -357,7 +368,8 @@ class _DoctorShiftList extends StatelessWidget {
     final todayStart =
     Timestamp.fromDate(DateTime(now.year, now.month, now.day));
     final endDate = Timestamp.fromDate(
-        DateTime(now.year, now.month, now.day + 30));
+      DateTime(now.year, now.month, now.day + 30),
+    );
 
     final col = FirebaseFirestore.instance
         .collectionGroup('shifts')
@@ -464,6 +476,7 @@ class _DoctorShiftList extends StatelessWidget {
                             slot,
                             doctorId,
                             doctorName,
+                            hospitalId,
                             hospitalName,
                             date,
                             d.id,
@@ -503,6 +516,7 @@ class _DoctorShiftList extends StatelessWidget {
       String slot,
       String doctorId,
       String doctorName,
+      String hospitalId,
       String hospitalName,
       DateTime date,
       String shiftId,
@@ -539,6 +553,7 @@ class _DoctorShiftList extends StatelessWidget {
         slot,
         doctorId,
         doctorName,
+        hospitalId,
         hospitalName,
         date,
         shiftId,
@@ -551,6 +566,7 @@ class _DoctorShiftList extends StatelessWidget {
       String slot,
       String doctorId,
       String doctorName,
+      String hospitalId,
       String hospitalName,
       DateTime date,
       String shiftId,
@@ -612,6 +628,7 @@ class _DoctorShiftList extends StatelessWidget {
         'patientName': patientName,
         'doctorId': doctorId,
         'doctorName': doctorName,
+        'hospitalId': hospitalId,
         'hospitalName': hospitalName,
         'shiftId': shiftId,
         'time': ts,

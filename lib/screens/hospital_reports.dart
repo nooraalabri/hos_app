@@ -3,9 +3,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../l10n/app_localizations.dart';
 import '../admin/hospital_doctor_reports_screen.dart';
-import '../admin/hospital_patient_reports_screen.dart';
-import '../services/firestore_service.dart';
+import 'package:hos_app/routes.dart'; // ⬅ مهم جداً
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/admin_drawer.dart';
+import '../services/firestore_service.dart';
 
 enum Period { weekly, monthly, yearly }
 
@@ -23,11 +24,12 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
   @override
   void initState() {
     super.initState();
-    final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    FS.hospitalForAdmin(uid).then((d) {
-      if (mounted) {
-        setState(() => hospId = d?['id']);
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    FirebaseFirestore.instance.collection('users').doc(uid).get().then((doc) {
+      if (doc.exists) {
+        final hid = doc.data()?['hospitalId'];
+        if (mounted) setState(() => hospId = hid);
       }
     });
   }
@@ -57,27 +59,17 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
 
       body: hospId == null
-          ? Center(
-        child: CircularProgressIndicator(
-          color: theme.colorScheme.primary,
-        ),
-      )
+          ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
           : FutureBuilder<Map<String, int>>(
         future: FS.statsForHospital(hospId!, periodKey),
         builder: (context, snap) {
           if (!snap.hasData) {
             return Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
-            );
+                child: CircularProgressIndicator(
+                    color: theme.colorScheme.primary));
           }
 
-          final m = snap.data ?? const {
-            'new': 0,
-            'appointments': 0,
-            'visits': 0
-          };
+          final m = snap.data ?? {'new': 0, 'appointments': 0, 'visits': 0};
 
           final total = (m['new'] ?? 0) +
               (m['appointments'] ?? 0) +
@@ -94,54 +86,32 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Search + Segmented Button
                 Row(
                   children: [
                     Expanded(
                       child: _SearchBox(
-                        onChanged: (s) {},
-                        hint: t.search,
-                      ),
+                          onChanged: (s) {}, hint: t.search),
                     ),
                     const SizedBox(width: 12),
                     SegmentedButton<Period>(
                       segments: [
-                        ButtonSegment(
-                            value: Period.weekly, label: Text(t.weekly)),
-                        ButtonSegment(
-                            value: Period.monthly, label: Text(t.monthly)),
-                        ButtonSegment(
-                            value: Period.yearly, label: Text(t.yearly)),
+                        ButtonSegment(value: Period.weekly, label: Text(t.weekly)),
+                        ButtonSegment(value: Period.monthly, label: Text(t.monthly)),
+                        ButtonSegment(value: Period.yearly, label: Text(t.yearly)),
                       ],
                       selected: {p},
-                      onSelectionChanged: (s) =>
-                          setState(() => p = s.first),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(
-                          theme.colorScheme.surfaceContainerHighest,
-                        ),
-                        foregroundColor: WidgetStatePropertyAll(
-                          theme.colorScheme.onSurface,
-                        ),
-                        side: WidgetStatePropertyAll(
-                          BorderSide(
-                              color: theme.colorScheme.outline),
-                        ),
-                      ),
-                    ),
+                      onSelectionChanged: (s) => setState(() => p = s.first),
+                    )
                   ],
                 ),
 
                 const SizedBox(height: 20),
 
-                // Pie Chart Card
                 Card(
                   color: theme.colorScheme.surface,
-                  shadowColor:
-                  theme.colorScheme.shadow.withValues(alpha: 0.1),
+                  shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                      borderRadius: BorderRadius.circular(20)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -149,8 +119,7 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
                         Text(
                           t.hospitalOverview,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                              fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 10),
 
@@ -169,24 +138,20 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 
                         const SizedBox(height: 12),
 
-                        _legend(
-                          context,
-                          color: theme.colorScheme.primary,
-                          text: t.newRegister,
-                          value: m['new'] ?? 0,
-                        ),
-                        _legend(
-                          context,
-                          color: theme.colorScheme.tertiary,
-                          text: t.appointments,
-                          value: m['appointments'] ?? 0,
-                        ),
-                        _legend(
-                          context,
-                          color: theme.colorScheme.secondary,
-                          text: t.visits,
-                          value: m['visits'] ?? 0,
-                        ),
+                        _legend(context,
+                            color: theme.colorScheme.primary,
+                            text: t.newRegister,
+                            value: m['new'] ?? 0),
+
+                        _legend(context,
+                            color: theme.colorScheme.tertiary,
+                            text: t.appointments,
+                            value: m['appointments'] ?? 0),
+
+                        _legend(context,
+                            color: theme.colorScheme.secondary,
+                            text: t.visits,
+                            value: m['visits'] ?? 0),
                       ],
                     ),
                   ),
@@ -194,31 +159,18 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 
                 const SizedBox(height: 20),
 
-                // Doctor Reports Button
-                _bigButton(
-                  context,
-                  t.doctorReports,
-                  icon: Icons.medical_information,
-                  onTap: () {
-                    Navigator.pushNamed(
-                        context, HospitalDoctorReportsScreen.route);
-                  },
-                ),
+                _bigButton(context, t.doctorReports,
+                    icon: Icons.medical_information,
+                    onTap: () => Navigator.pushNamed(
+                        context, HospitalDoctorReportsScreen.route)),
 
                 const SizedBox(height: 12),
 
-                // Patient Reports Button
-                _bigButton(
-                  context,
-                  t.patientReports,
-                  icon: Icons.people,
-                  onTap: () {
-                    Navigator.pushNamed(
-                        context, HospitalPatientReportsScreen.route);
-                  },
-                ),
-
-                const SizedBox(height: 30),
+                // ✅ هنا التعديل المهم
+                _bigButton(context, t.patientReports,
+                    icon: Icons.people,
+                    onTap: () => Navigator.pushNamed(
+                        context, AppRoutes.hospitalPatientReports)),
               ],
             ),
           );
@@ -227,7 +179,6 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
     );
   }
 
-  // -------- PIE CHART SECTION --------
   PieChartSectionData _sec(int v, Color c) {
     return PieChartSectionData(
       value: (v <= 0 ? 1 : v).toDouble(),
@@ -235,14 +186,10 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
       radius: 45,
       title: v.toString(),
       titleStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
+          fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
     );
   }
 
-  // -------- LEGEND --------
   Widget _legend(BuildContext context,
       {required Color color, required String text, required int value}) {
     final theme = Theme.of(context);
@@ -251,26 +198,21 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          Container(width: 12, height: 12,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
-          Text(
-            value.toString(),
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
-          )
+          Text(value.toString(),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  // -------- BUTTON --------
   Widget _bigButton(BuildContext ctx, String title,
-      {IconData icon = Icons.arrow_forward_ios, VoidCallback? onTap}) {
+      {required IconData icon, VoidCallback? onTap}) {
     final theme = Theme.of(ctx);
 
     return Card(
@@ -278,22 +220,16 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ListTile(
         leading: Icon(icon, color: theme.colorScheme.onPrimary),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: theme.colorScheme.onPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing:
-        Icon(Icons.chevron_right, color: theme.colorScheme.onPrimary),
+        title: Text(title,
+            style: TextStyle(
+                color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w600)),
+        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onPrimary),
         onTap: onTap,
       ),
     );
   }
 }
 
-// -------- SEARCH BOX --------
 class _SearchBox extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
@@ -313,11 +249,9 @@ class _SearchBox extends StatelessWidget {
         filled: true,
         fillColor: theme.colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       ),
     );
   }

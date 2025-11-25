@@ -4,6 +4,7 @@
   "logout": "Logout",
   "email": "E-mail",
   "password": "Password",
+  "dashboard": "Dashboard",
   "confirm_password": "Confirm Password",
   "welcome": "Welcome",
   "welcome_back": "Welcome back",

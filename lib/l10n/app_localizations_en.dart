@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get password => 'Password';
 
   @override
+  String get dashboard => 'Dashboard';
+
+  @override
   String get confirm_password => 'Confirm Password';
 
   @override
@@ -172,9 +175,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get home => 'Home';
-
-  @override
-  String get dashboard => 'Dashboard';
 
   @override
   String get my_shifts => 'My Shifts';

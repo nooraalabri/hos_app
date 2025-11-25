@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../widgets/admin_drawer.dart';
 import '../../services/firestore_service.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -24,8 +23,12 @@ class _HospitalPatientReportsScreenState
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    FS.hospitalForAdmin(uid).then((d) {
-      setState(() => hospId = d?['id']);
+    // === GET hospitalId FROM USERS ===
+    FS.users.doc(uid).get().then((doc) {
+      if (doc.exists) {
+        final hid = doc.data()?['hospitalId'];
+        if (mounted) setState(() => hospId = hid);
+      }
     });
   }
 
@@ -36,12 +39,19 @@ class _HospitalPatientReportsScreenState
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(); // back button
+          },
+        ),
         title: Text(t.patient_profile),
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
       ),
 
-      drawer: const AdminDrawer(),
+      // 🔥 Removed Drawer (no menu)
+      // drawer: const AdminDrawer(),
 
       body: hospId == null
           ? const Center(child: CircularProgressIndicator())
@@ -88,9 +98,9 @@ class _HospitalPatientReportsScreenState
                     filled: true,
                     fillColor: cs.surface.withValues(alpha: 0.2),
                   ),
-                  onChanged: (v) => setState(
-                        () => _search = v.trim().isEmpty ? null : v.trim(),
-                  ),
+                  onChanged: (v) => setState(() {
+                    _search = v.trim().isEmpty ? null : v.trim();
+                  }),
                 ),
 
                 const SizedBox(height: 16),
@@ -120,7 +130,8 @@ class _HospitalPatientReportsScreenState
                         child: Padding(
                           padding: const EdgeInsets.all(14),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
                             children: [
                               Text(
                                 '${t.patient}: ${r['patientName'] ?? t.unknown}',
@@ -137,7 +148,8 @@ class _HospitalPatientReportsScreenState
                               Text(
                                 '${t.doctor}: ${r['doctorName'] ?? '-'}',
                                 style: TextStyle(
-                                  color: cs.onSurface.withValues(alpha: .8),
+                                  color: cs.onSurface
+                                      .withValues(alpha: .8),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -145,7 +157,8 @@ class _HospitalPatientReportsScreenState
                               Text(
                                 '${t.hospital}: ${r['hospitalName'] ?? '-'}',
                                 style: TextStyle(
-                                  color: cs.onSurface.withValues(alpha: .8),
+                                  color: cs.onSurface
+                                      .withValues(alpha: .8),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -153,7 +166,8 @@ class _HospitalPatientReportsScreenState
                               Text(
                                 '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
                                 style: TextStyle(
-                                  color: cs.onSurface.withValues(alpha: .8),
+                                  color: cs.onSurface
+                                      .withValues(alpha: .8),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -161,7 +175,8 @@ class _HospitalPatientReportsScreenState
                               Text(
                                 '${t.date}: $date',
                                 style: TextStyle(
-                                  color: cs.onSurface.withValues(alpha: .8),
+                                  color: cs.onSurface
+                                      .withValues(alpha: .8),
                                 ),
                               ),
                             ],

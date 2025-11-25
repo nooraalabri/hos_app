@@ -21,6 +21,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get password => 'كلمة المرور';
 
   @override
+  String get dashboard => 'لوحة التحكم';
+
+  @override
   String get confirm_password => 'تأكيد كلمة المرور';
 
   @override
@@ -172,9 +175,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get home => 'الصفحة الرئيسية';
-
-  @override
-  String get dashboard => 'لوحة التحكم';
 
   @override
   String get my_shifts => 'مناوباتي';

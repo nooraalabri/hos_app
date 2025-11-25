@@ -52,8 +52,32 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = cred.user?.uid;
       if (uid == null) throw Exception("UID is null");
 
-      // 🔹 جلب الدور
-      final role = await _getUserRole(uid);
+      // 🔹 التحقق من وجود بيانات المستخدم في Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (!doc.exists) {
+        // ❌ الحساب موجود في Authentication فقط → احذفيه وطلّعيه
+        await cred.user!.delete();
+        await FirebaseAuth.instance.signOut();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Your account has been removed by the administrator.")
+            ),
+          );
+
+          Navigator.pushNamedAndRemoveUntil(
+              context, AppRoutes.login, (route) => false);
+        }
+        return;
+      }
+
+      // 🔹 جلب الدور من Firestore
+      final role = doc.data()?['role'] as String?;
 
       // 🔹 حفظ FCM Token
       await _saveFcmToken(uid);
@@ -96,13 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
         }, SetOptions(merge: true));
       }
     } catch (_) {}
-  }
-
-  Future<String?> _getUserRole(String uid) async {
-    final doc =
-    await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (!doc.exists) return null;
-    return doc.data()?['role'] as String?;
   }
 
   void _go(String route) {
