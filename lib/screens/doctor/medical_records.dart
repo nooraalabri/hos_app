@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../l10n/app_localizations.dart';
 
 class MedicalRecord extends StatefulWidget {
@@ -29,14 +31,17 @@ class _MedicalRecordState extends State<MedicalRecord> {
 
   Map<String, dynamic>? _patient;
   List<Map<String, dynamic>> _existingMeds = [];
+  List<Map<String, dynamic>> _reportsPdfCache = [];
 
   @override
   void initState() {
     super.initState();
     _fetchPatient();
     _fetchMedicines();
+    _fetchReportsForPdf();
   }
 
+  // ----------------------- FETCH PATIENT -----------------------
   Future<void> _fetchPatient() async {
     final doc = await _db.collection('users').doc(widget.patientId).get();
     if (!doc.exists) return;
@@ -49,6 +54,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     });
   }
 
+  // ----------------------- FETCH MEDICINES -----------------------
   Future<void> _fetchMedicines() async {
     final meds = await _db
         .collection('users')
@@ -62,6 +68,21 @@ class _MedicalRecordState extends State<MedicalRecord> {
     });
   }
 
+  // ----------------------- FETCH REPORTS FOR PDF -----------------------
+  Future<void> _fetchReportsForPdf() async {
+    final reports = await _db
+        .collection('users')
+        .doc(widget.patientId)
+        .collection('reports')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    setState(() {
+      _reportsPdfCache = reports.docs.map((r) => r.data()).toList();
+    });
+  }
+
+  // ----------------------- SAVE UPDATES -----------------------
   Future<void> _saveUpdates() async {
     final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -128,6 +149,127 @@ class _MedicalRecordState extends State<MedicalRecord> {
     setState(() {});
   }
 
+  // ----------------------- PDF GENERATOR -----------------------
+  Future<void> _generatePdf() async {
+    final pdf = pw.Document();
+
+    final patient = _patient ?? {};
+    final chronic = (patient['chronic'] ?? []).join(', ');
+    final allergies = patient['allergies'] ?? '';
+
+    final name = patient['name'] ?? '-';
+    final phone = patient['phone'] ?? '-';
+    final blood = patient['bloodType'] ?? '-';
+    final dob = patient['dob'] ?? '-';
+
+    pdf.addPage(
+      pw.MultiPage(
+        margin: const pw.EdgeInsets.all(32),
+        build: (context) => [
+          pw.Center(
+            child: pw.Text(
+              "MEDICAL RECORD REPORT",
+              style:
+              pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          // -------------------- PATIENT INFO --------------------
+          pw.Container(
+            padding: const pw.EdgeInsets.all(14),
+            decoration: pw.BoxDecoration(border: pw.Border.all()),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text("Patient Information",
+                    style: pw.TextStyle(
+                        fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 6),
+                pw.Text("Name: $name"),
+                pw.Text("Date of Birth: $dob"),
+                pw.Text("Phone: $phone"),
+                pw.Text("Blood Type: $blood"),
+              ],
+            ),
+          ),
+
+          pw.SizedBox(height: 20),
+
+          // -------------------- MEDICAL INFO --------------------
+          pw.Container(
+            padding: const pw.EdgeInsets.all(14),
+            decoration: pw.BoxDecoration(border: pw.Border.all()),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text("Medical Information",
+                    style: pw.TextStyle(
+                        fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 6),
+                pw.Text("Chronic Diseases: $chronic"),
+                pw.Text("Allergies: $allergies"),
+              ],
+            ),
+          ),
+
+          pw.SizedBox(height: 25),
+
+          // -------------------- MEDICINES TABLE --------------------
+          pw.Text("Current Medicines",
+              style: pw.TextStyle(
+                  fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+
+          _existingMeds.isEmpty
+              ? pw.Text("No medicines recorded.")
+              : pw.Table.fromTextArray(
+            headers: ["Medicine", "Dosage", "Days"],
+            data: _existingMeds
+                .map((m) => [
+              m['name'] ?? '-',
+              m['dosage'] ?? '-',
+              m['days'] ?? '-'
+            ])
+                .toList(),
+          ),
+
+          pw.SizedBox(height: 25),
+
+          // -------------------- REPORTS TABLE --------------------
+          pw.Text("Previous Reports",
+              style: pw.TextStyle(
+                  fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+
+          _reportsPdfCache.isEmpty
+              ? pw.Text("No previous reports.")
+              : pw.Table.fromTextArray(
+            headers: ["Diagnosis", "Notes", "Hospital"],
+            data: _reportsPdfCache
+                .map((r) => [
+              r['diagnosis'] ?? '-',
+              r['notes'] ?? '-',
+              r['hospitalName'] ?? '-',
+            ])
+                .toList(),
+          ),
+
+          pw.SizedBox(height: 40),
+
+          pw.Text("Doctor Signature: __________________________"),
+          pw.SizedBox(height: 10),
+          pw.Text("Hospital Stamp: ____________________________"),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
+  // ----------------------- UI -----------------------
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -145,7 +287,14 @@ class _MedicalRecordState extends State<MedicalRecord> {
           ),
         ),
         iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: _generatePdf,
+          ),
+        ],
       ),
+
       body: _patient == null
           ? Center(
         child: CircularProgressIndicator(
@@ -169,8 +318,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  // ================= Patient Info =================
-
+  // ----------------------- PATIENT INFO CARD -----------------------
   Widget _buildPatientInfo(AppLocalizations t) {
     final theme = Theme.of(context);
 
@@ -210,7 +358,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
             child: Text(
               value,
               style: TextStyle(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                color: theme.colorScheme.onPrimary.withOpacity(0.8),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -220,8 +368,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  // ================= Medical Info =================
-
+  // ----------------------- MEDICAL INFO CARD -----------------------
   Widget _buildMedicalSection(AppLocalizations t) {
     final theme = Theme.of(context);
 
@@ -241,6 +388,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
               ),
             ),
             const SizedBox(height: 12),
+
+            // chronic
             TextFormField(
               controller: _chronic,
               readOnly: !_editing,
@@ -251,7 +400,10 @@ class _MedicalRecordState extends State<MedicalRecord> {
                 border: const OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 12),
+
+            // allergies
             TextFormField(
               controller: _allergies,
               readOnly: !_editing,
@@ -268,8 +420,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  // ================= Medicines =================
-
+  // ----------------------- MEDICINES SECTION -----------------------
   Widget _buildMedicinesSection(AppLocalizations t) {
     final theme = Theme.of(context);
 
@@ -288,18 +439,18 @@ class _MedicalRecordState extends State<MedicalRecord> {
                 color: theme.colorScheme.primary,
               ),
             ),
+
             const SizedBox(height: 10),
+
             if (_existingMeds.isEmpty)
               Text(
                 t.noMedicines,
-                style: theme.textTheme.bodyMedium!.copyWith(
-                  color: theme.hintColor,
-                ),
+                style: theme.textTheme.bodyMedium!
+                    .copyWith(color: theme.hintColor),
               )
             else
               ..._existingMeds.map(
                     (m) => ListTile(
-                  contentPadding: EdgeInsets.zero,
                   title: Text(m['name'] ?? '-'),
                   subtitle: Text(
                     "${t.medicines}: ${m['dosage'] ?? '-'} • ${t.time}: ${m['days'] ?? '-'}",
@@ -359,8 +510,7 @@ class _MedicalRecordState extends State<MedicalRecord> {
     );
   }
 
-  // ================= Reports =================
-
+  // ----------------------- REPORTS SECTION -----------------------
   Widget _buildReportsSection(AppLocalizations t) {
     final theme = Theme.of(context);
 
@@ -381,8 +531,8 @@ class _MedicalRecordState extends State<MedicalRecord> {
         if (docs.isEmpty) {
           return Text(
             t.noPreviousReports,
-            style: theme.textTheme.bodyMedium!
-                .copyWith(color: theme.hintColor),
+            style:
+            theme.textTheme.bodyMedium!.copyWith(color: theme.hintColor),
           );
         }
 
@@ -397,57 +547,55 @@ class _MedicalRecordState extends State<MedicalRecord> {
               ),
             ),
             const SizedBox(height: 10),
-            ...docs.map(
-                  (d) {
-                final r = d.data() as Map<String, dynamic>;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+
+            ...docs.map((d) {
+              final r = d.data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: theme.colorScheme.primary,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${t.notes}: ${r['notes'] ?? '-'}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimary
+                              .withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${t.hospital}: ${r['hospitalName'] ?? '-'}',
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimary
+                              .withOpacity(0.8),
+                        ),
+                      ),
+                    ],
                   ),
-                  color: theme.colorScheme.primary,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${t.notes}: ${r['notes'] ?? '-'}',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary
-                                .withValues(alpha: 0.8),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${t.hospital}: ${r['hospitalName'] ?? '-'}',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary
-                                .withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
           ],
         );
       },
     );
   }
 
-  // ================= Button =================
-
+  // ----------------------- SAVE BUTTON -----------------------
   Widget _buildUpdateButton(AppLocalizations t) {
     final theme = Theme.of(context);
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../l10n/app_localizations.dart';
 
 class ReportDetails extends StatelessWidget {
@@ -11,6 +13,83 @@ class ReportDetails extends StatelessWidget {
     required this.reportData,
     required this.reportId,
   });
+
+  // ======================= PDF GENERATOR =======================
+
+  Future<void> _generatePdf(BuildContext context, AppLocalizations t) async {
+    final pdf = pw.Document();
+
+    final Timestamp? ts = reportData['createdAt'];
+    final String date = ts != null
+        ? "${ts.toDate().year}-${ts.toDate().month.toString().padLeft(2, '0')}-${ts.toDate().day.toString().padLeft(2, '0')}"
+        : '—';
+
+    final meds = reportData['medicationsList'] ?? [];
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (ctx) => [
+          pw.Text(
+            t.reportDetails,
+            style: pw.TextStyle(
+              fontSize: 22,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          pw.Text("${t.reportDate}: $date"),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.generalReport,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(reportData['report'] ?? '—'),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.chronicDiseases,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(_formatList(reportData['chronic'])),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.allergies,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(reportData['allergies'] ?? '—'),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.medications,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+
+          for (var m in meds) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              margin: const pw.EdgeInsets.only(bottom: 10),
+              decoration: pw.BoxDecoration(
+                borderRadius: pw.BorderRadius.circular(8),
+                border: pw.Border.all(),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("• ${m['name'] ?? ''}",
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Text("${t.dosage}: ${m['dosage'] ?? ''}"),
+                  pw.Text("${t.days}: ${m['days'] ?? ''}"),
+                  pw.Text("${t.notes}: ${m['notes'] ?? ''}"),
+                ],
+              ),
+            )
+          ],
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
+  // ======================= BUILD PAGE =======================
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +112,21 @@ class ReportDetails extends StatelessWidget {
           ),
         ),
         iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+
+        // ======== PDF Button ========
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            color: theme.colorScheme.onPrimary,
+            onPressed: () async {
+              await _generatePdf(context, t);
+            },
+          ),
+        ],
       ),
+
       backgroundColor: theme.scaffoldBackgroundColor,
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(

@@ -24,6 +24,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dashboard => 'لوحة التحكم';
 
   @override
+  String get enterAddressManually => 'أدخل العنوان يدويًا';
+
+  @override
+  String get pickDateRange => 'اختيار المدة الزمنية';
+
+  @override
+  String get medicineNotes => 'ملاحظات';
+
+  @override
+  String get daysPassed => 'الأيام المنقضية';
+
+  @override
+  String get remaining => 'المتبقي';
+
+  @override
+  String get dateRange => 'مدة الدواء';
+
+  @override
   String get confirm_password => 'تأكيد كلمة المرور';
 
   @override
@@ -563,9 +581,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get medicineDays => 'الأيام';
-
-  @override
-  String get medicineNotes => 'ملاحظات';
 
   @override
   String get medicineNameHint => 'اسم الدواء';

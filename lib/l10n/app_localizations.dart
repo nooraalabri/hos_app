@@ -128,6 +128,42 @@ abstract class AppLocalizations {
   /// **'Dashboard'**
   String get dashboard;
 
+  /// No description provided for @enterAddressManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter address manually'**
+  String get enterAddressManually;
+
+  /// No description provided for @pickDateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range'**
+  String get pickDateRange;
+
+  /// No description provided for @medicineNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get medicineNotes;
+
+  /// No description provided for @daysPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Days passed'**
+  String get daysPassed;
+
+  /// No description provided for @remaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remaining;
+
+  /// No description provided for @dateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Date range'**
+  String get dateRange;
+
   /// No description provided for @confirm_password.
   ///
   /// In en, this message translates to:
@@ -1207,12 +1243,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Days'**
   String get medicineDays;
-
-  /// No description provided for @medicineNotes.
-  ///
-  /// In en, this message translates to:
-  /// **'Notes'**
-  String get medicineNotes;
 
   /// No description provided for @medicineNameHint.
   ///

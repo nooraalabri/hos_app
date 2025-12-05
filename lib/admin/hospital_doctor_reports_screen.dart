@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../services/firestore_service.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -32,6 +34,48 @@ class _HospitalDoctorReportsScreenState
     });
   }
 
+  // ===== PDF GENERATION FUNCTION =====
+  Future<void> _generatePdf(List<Map<String, dynamic>> doctors) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Text(
+            "Doctors Report",
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 20),
+
+          for (var d in doctors) ...[
+            pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 12),
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("Name: ${d['name']}"),
+                  pw.Text("Email: ${d['email']}"),
+                  pw.Text("Specialization: ${d['specialization']}"),
+                  pw.Text("Total Appointments: ${d['total']}"),
+                  pw.Text("Completed: ${d['completed']}"),
+                ],
+              ),
+            )
+          ]
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -42,7 +86,7 @@ class _HospitalDoctorReportsScreenState
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.of(context).pop(); // يرجع للصفحة السابقة
+            Navigator.of(context).pop();
           },
         ),
         title: Text(t.doctor_profile),
@@ -83,6 +127,48 @@ class _HospitalDoctorReportsScreenState
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // ===== DOWNLOAD PDF BUTTON =====
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: Text("Download PDF"),
+                    onPressed: () async {
+                      final List<Map<String, dynamic>> reportData = [];
+
+                      // ـــ تجميع بيانات كل دكتور في التقرير ـــ
+                      for (var d in doctors) {
+                        final doctorId = d['id'];
+
+                        final apps = await FirebaseFirestore.instance
+                            .collection('appointments')
+                            .where('doctorId', isEqualTo: doctorId)
+                            .get();
+
+                        final total = apps.docs.length;
+                        final completed = apps.docs
+                            .where((a) =>
+                        (a.data()['status'] ?? '') ==
+                            'completed')
+                            .length;
+
+                        reportData.add({
+                          'name': d['name'] ?? 'Unknown',
+                          'email': d['email'] ?? '',
+                          'specialization':
+                          d['specialization'] ?? '—',
+                          'total': total,
+                          'completed': completed,
+                        });
+                      }
+
+                      await _generatePdf(reportData);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
                 // ===== SEARCH BOX =====
                 TextField(
                   decoration: InputDecoration(
@@ -162,8 +248,7 @@ class _HospitalDoctorReportsScreenState
                                     email,
                                     style: TextStyle(
                                       color: cs.onSurface
-                                          .withValues(
-                                          alpha: .8),
+                                          .withValues(alpha: .8),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -171,8 +256,7 @@ class _HospitalDoctorReportsScreenState
                                     '${t.specialization}: $specialization',
                                     style: TextStyle(
                                       color: cs.onSurface
-                                          .withValues(
-                                          alpha: .8),
+                                          .withValues(alpha: .8),
                                     ),
                                   ),
                                   const SizedBox(height: 12),

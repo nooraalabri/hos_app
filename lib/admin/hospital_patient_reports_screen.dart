@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../services/firestore_service.dart';
 import '../../l10n/app_localizations.dart';
 
 class HospitalPatientReportsScreen extends StatefulWidget {
@@ -15,21 +14,38 @@ class HospitalPatientReportsScreen extends StatefulWidget {
 
 class _HospitalPatientReportsScreenState
     extends State<HospitalPatientReportsScreen> {
-  String? hospId;
+  String? hospitalName;
   String? _search;
 
   @override
   void initState() {
     super.initState();
+    _loadHospitalData();
+  }
+
+  /// 🟡 نجلب hospitalName بدل hospitalId
+  Future<void> _loadHospitalData() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    // === GET hospitalId FROM USERS ===
-    FS.users.doc(uid).get().then((doc) {
-      if (doc.exists) {
-        final hid = doc.data()?['hospitalId'];
-        if (mounted) setState(() => hospId = hid);
-      }
-    });
+    final userSnap =
+    await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    if (userSnap.exists && mounted) {
+      setState(() => hospitalName = userSnap.data()?['hospitalName']);
+    }
+  }
+
+  /// 🔥 جلب المواعيد الخاصة بالمستشفى باستخدام hospitalName
+  Stream<List<Map<String, dynamic>>> getReports() async* {
+    if (hospitalName == null) yield [];
+
+    final snap = await FirebaseFirestore.instance
+        .collection('appointments')
+        .where('hospitalName', isEqualTo: hospitalName)
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    yield snap.docs.map((e) => e.data()).toList();
   }
 
   @override
@@ -41,155 +57,107 @@ class _HospitalPatientReportsScreenState
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop(); // back button
-          },
+          onPressed: () => Navigator.pop(context),
         ),
-        title: Text(t.patient_profile),
+        title: Text(t.patientReports),
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
       ),
 
-      // 🔥 Removed Drawer (no menu)
-      // drawer: const AdminDrawer(),
-
-      body: hospId == null
+      body: hospitalName == null
           ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collectionGroup('reports')
-            .where('hospitalId', isEqualTo: hospId)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          : StreamBuilder<List<Map<String, dynamic>>>(
+          stream: getReports(),
+          builder: (ctx, snap) {
+            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
 
-          if (!snap.hasData || snap.data!.docs.isEmpty) {
-            return Center(child: Text(t.no_data));
-          }
+            final data = snap.data!;
+            if (data.isEmpty) return Center(child: Text(t.no_data));
 
-          final items = snap.data!.docs
-              .map((d) => d.data())
-              .where(
-                (r) =>
+            final filtered = data.where((r) =>
             _search == null ||
-                (r['patientName'] ?? '')
-                    .toString()
+                (r['patientName'] ?? "")
                     .toLowerCase()
-                    .contains(_search!.toLowerCase()),
-          )
-              .toList();
+                    .contains(_search!.toLowerCase())
+            ).toList();
 
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // 🔍 Search
-                TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: t.search_patient,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // 🔍 Search
+                  TextField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: t.search_patient,
+                      filled: true,
+                      fillColor: cs.surface.withValues(alpha: .15),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: cs.surface.withValues(alpha: 0.2),
+                    onChanged: (v) =>
+                        setState(() => _search = v.trim().isEmpty ? null : v),
                   ),
-                  onChanged: (v) => setState(() {
-                    _search = v.trim().isEmpty ? null : v.trim();
-                  }),
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 📋 Reports List
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (ctx, i) {
-                      final r = items[i];
+                  // 📌 List
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (ctx, i) {
+                        final r = filtered[i];
 
-                      final date = (r['createdAt'] is Timestamp)
-                          ? (r['createdAt'] as Timestamp)
-                          .toDate()
-                          .toString()
-                          .split(' ')
-                          .first
-                          : '-';
+                        final date = (r['createdAt'] is Timestamp)
+                            ? (r['createdAt'] as Timestamp)
+                            .toDate()
+                            .toString()
+                            .split(" ")
+                            .first
+                            : "-";
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        color: cs.surface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${t.patient}: ${r['patientName'] ?? t.unknown}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              Text(
-                                '${t.doctor}: ${r['doctorName'] ?? '-'}',
-                                style: TextStyle(
-                                  color: cs.onSurface
-                                      .withValues(alpha: .8),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              Text(
-                                '${t.hospital}: ${r['hospitalName'] ?? '-'}',
-                                style: TextStyle(
-                                  color: cs.onSurface
-                                      .withValues(alpha: .8),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              Text(
-                                '${t.diagnosis}: ${r['diagnosis'] ?? '-'}',
-                                style: TextStyle(
-                                  color: cs.onSurface
-                                      .withValues(alpha: .8),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              Text(
-                                '${t.date}: $date',
-                                style: TextStyle(
-                                  color: cs.onSurface
-                                      .withValues(alpha: .8),
-                                ),
-                              ),
-                            ],
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _item(context, t.patient, r['patientName']),
+                                _item(context, t.doctor, r['doctorName']),
+                                _item(context, t.hospital, r['hospitalName']),
+                                _item(context, t.diagnosis, r['diagnosis']),
+                                _item(context, t.date, date),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                ],
+              ),
+            );
+          }),
+    );
+  }
+
+  Widget _item(BuildContext ctx, String title, data) {
+    final cs = Theme.of(ctx).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        "$title: ${data ?? '-'}",
+        style: TextStyle(
+          color: cs.onSurface.withValues(alpha: .85),
+          fontSize: 15,
+        ),
       ),
     );
   }

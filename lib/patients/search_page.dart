@@ -716,24 +716,31 @@ class _CardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const textColor = AppColors.white;
-
     return PrimaryCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: textColor, size: 42),
+          Icon(
+            icon,
+            color: AppColors.dark,   // ← لون الأيقونة واضح
+            size: 42,
+          ),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Text(
               '$title\n$subtitle',
               style: const TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.w500,
+                color: AppColors.dark,   // ← النص واضح
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
               ),
             ),
           ),
+
           const SizedBox(width: 12),
+
           PrimaryButton(
             text: actionText,
             onPressed: onAction,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../l10n/app_localizations.dart';
 
 import '../widgets/app_input.dart';
@@ -8,7 +9,7 @@ import '../services/firestore_service.dart';
 import '../services/notify_service.dart';
 import '../models/app_user.dart';
 import '../routes.dart';
-import 'map_picker_screen.dart';
+import 'location_picker.dart';
 
 class RegisterHospitalScreen extends StatefulWidget {
   const RegisterHospitalScreen({super.key});
@@ -30,8 +31,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   final _location = TextEditingController();
   final _website = TextEditingController();
 
-  double? _lat;
-  double? _lng;
+  LatLng? pickedLocation;
 
   bool _loading = false;
   String? _error;
@@ -58,14 +58,11 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   bool _validHospitalName(String v) =>
       RegExp(r'^[a-zA-Z0-9\u0621-\u064A ]{3,}$').hasMatch(v);
 
-  bool _validLicense(String v) =>
-      RegExp(r'^\d{5,8}$').hasMatch(v);
+  bool _validLicense(String v) => RegExp(r'^\d{5,8}$').hasMatch(v);
 
-  bool _validCR(String v) =>
-      RegExp(r'^\d{8}$').hasMatch(v);
+  bool _validCR(String v) => RegExp(r'^\d{8}$').hasMatch(v);
 
-  bool _validOmanNumber(String v) =>
-      RegExp(r'^[279]\d{7}$').hasMatch(v);
+  bool _validOmanNumber(String v) => RegExp(r'^[279]\d{7}$').hasMatch(v);
 
   bool _validWebsite(String v) =>
       v.isEmpty || RegExp(r'^https?:\/\/').hasMatch(v);
@@ -77,9 +74,9 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
     if (!_form.currentState!.validate()) return;
 
-    if (_lat == null || _lng == null) {
+    if (pickedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("${t.addressLocation} ${t.required}")),
+        SnackBar(content: Text(t.required)),
       );
       return;
     }
@@ -90,7 +87,6 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     });
 
     try {
-      // 1 — Create Account
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -106,7 +102,6 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
       final uid = cred.user!.uid;
 
-      // 2 — Save Hospital
       await FS.createHospital(
         name: _name.text.trim(),
         email: _email.text.trim(),
@@ -115,23 +110,22 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
           'licenseNumber': _licenseNo.text.trim(),
           'crNumber': _crNumber.text.trim(),
           'phone': _phone.text.trim(),
-          'location': _location.text.trim(),
-          'lat': _lat,
-          'lng': _lng,
           'website': _website.text.trim(),
           'approved': false,
           'createdAt': DateTime.now(),
+          'location': {
+            'lat': pickedLocation!.latitude,
+            'lng': pickedLocation!.longitude,
+          }
         },
       );
 
-      // 3 — Save user
       await FS.createUser(uid, {
         'role': 'hospitaladmin',
         'hospitalId': uid,
         'approved': false,
       });
 
-      // 4 — Notify Head Admin
       try {
         await NotifyService.notifyHeadAdmin(_name.text.trim());
       } catch (_) {}
@@ -161,7 +155,6 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -183,15 +176,12 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
                 const SizedBox(height: 18),
 
-                // ================= INPUTS =================
-
                 AppInput(
                   controller: _name,
                   label: t.hospitalName,
                   hint: t.enterOfficialHospitalName,
-                  validator: (v) => v != null && _validHospitalName(v)
-                      ? null
-                      : t.required,
+                  validator: (v) =>
+                  v != null && _validHospitalName(v) ? null : t.required,
                 ),
                 const SizedBox(height: 12),
 
@@ -215,8 +205,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                   controller: _phone,
                   label: t.phoneNumber,
                   keyboardType: TextInputType.phone,
-                  validator: (v) =>
-                  v != null && _validOmanNumber(v)
+                  validator: (v) => v != null && _validOmanNumber(v)
                       ? null
                       : t.enterValidNumber,
                 ),
@@ -249,28 +238,28 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                 ),
                 const SizedBox(height: 12),
 
+                // LOCATION PICKER
                 GestureDetector(
                   onTap: () async {
-                    final result = await Navigator.push(
+                    final pos = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const MapPickerScreen(),
+                        builder: (_) => const LocationPickerScreen(),
                       ),
                     );
 
-                    if (result != null) {
-                      setState(() {
-                        _location.text = result["address"];
-                        _lat = result["lat"];
-                        _lng = result["lng"];
-                      });
+                    if (pos != null) {
+                      pickedLocation = pos;
+                      _location.text =
+                      "${pos.latitude}, ${pos.longitude}";
+                      setState(() {});
                     }
                   },
                   child: AbsorbPointer(
                     child: AppInput(
                       controller: _location,
                       label: t.addressLocation,
-                      hint: t.pickFromMap,
+                      hint: "Tap to pick location",
                       validator: (v) =>
                       v != null && v.isNotEmpty ? null : t.required,
                     ),
@@ -318,7 +307,7 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
                             Navigator.pushReplacementNamed(
                                 context, AppRoutes.login),
                         child: Text(t.login),
-                      )
+                      ),
                     ],
                   ),
                 )

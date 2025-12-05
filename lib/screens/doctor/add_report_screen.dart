@@ -27,7 +27,9 @@ class _AddReportState extends State<AddReport> {
   final _allergies = TextEditingController();
   bool _saving = false;
 
-  final List<Map<String, TextEditingController>> _medicines = [];
+  /// medicines now includes name, dosage, notes, startDate, endDate
+  final List<Map<String, dynamic>> _medicines = [];
+
   final _db = FirebaseFirestore.instance;
 
   @override
@@ -57,8 +59,9 @@ class _AddReportState extends State<AddReport> {
       _medicines.add({
         'name': TextEditingController(),
         'dosage': TextEditingController(),
-        'days': TextEditingController(),
         'notes': TextEditingController(),
+        'start': null,
+        'end': null,
       });
     });
   }
@@ -185,12 +188,13 @@ class _AddReportState extends State<AddReport> {
           .get();
 
       final meds = _medicines
-          .where((m) => m['name']!.text.isNotEmpty)
+          .where((m) => m['name'].text.isNotEmpty)
           .map((m) => {
-        'name': m['name']!.text.trim(),
-        'dosage': m['dosage']!.text.trim(),
-        'days': m['days']!.text.trim(),
-        'notes': m['notes']!.text.trim(),
+        'name': m['name'].text.trim(),
+        'dosage': m['dosage'].text.trim(),
+        'notes': m['notes'].text.trim(),
+        'startDate': m['start'],
+        'endDate': m['end'],
       })
           .toList();
 
@@ -262,7 +266,7 @@ class _AddReportState extends State<AddReport> {
             columnWidths: const {
               0: FlexColumnWidth(2),
               1: FlexColumnWidth(1.5),
-              2: FlexColumnWidth(1),
+              2: FlexColumnWidth(2),
               3: FlexColumnWidth(2),
               4: FlexColumnWidth(0.6),
             },
@@ -274,7 +278,7 @@ class _AddReportState extends State<AddReport> {
                 children: [
                   _TableHeader(t.medicineName),
                   _TableHeader(t.medicineDosage),
-                  _TableHeader(t.medicineDays),
+                  _TableHeader("Start - End"),
                   _TableHeader(t.medicineNotes),
                   const _TableHeader(""),
                 ],
@@ -302,19 +306,50 @@ class _AddReportState extends State<AddReport> {
                         decoration: _miniInput(t.medicineDosageHint),
                       ),
                     ),
+
+                    /// Calendar Picker
                     _TableCell(
-                      TextFormField(
-                        controller: med['days'],
-                        keyboardType: TextInputType.number,
-                        decoration: _miniInput(t.medicineDaysHint),
+                      Column(
+                        children: [
+                          Text(
+                            med['start'] == null
+                                ? t.pickDateRange
+                                : "${med['start'].day}/${med['start'].month}/${med['start'].year} → ${med['end'].day}/${med['end'].month}/${med['end'].year}",
+                            style: const TextStyle(fontSize: 11),
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final range = await showDateRangePicker(
+                                context: context,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+                              if (range != null) {
+                                setState(() {
+                                  med['start'] = range.start;
+                                  med['end'] = range.end;
+                                });
+                              }
+                            },
+                            child: Text(
+                              t.pickDateRange,
+                              style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontSize: 11),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+
                     _TableCell(
                       TextFormField(
                         controller: med['notes'],
                         decoration: _miniInput(t.medicineNotesHint),
                       ),
                     ),
+
                     _TableCell(
                       IconButton(
                         icon: Icon(Icons.delete,

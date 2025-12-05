@@ -26,6 +26,10 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   final _pass = TextEditingController();
   final _pass2 = TextEditingController();
 
+  // Face Scan Data
+  String? _faceUrl; // URL من السيرفر
+  List<dynamic>? _faceEmbedding; // embedding
+
   bool _loading = false;
   String? _error;
 
@@ -44,7 +48,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     super.dispose();
   }
 
-  // ================= Date Picker =================
+  // ========== Date Picker ==========
   Future<void> _pickDob() async {
     final now = DateTime.now();
     final initial = DateTime(now.year - 18, now.month, now.day);
@@ -65,9 +69,56 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
-  // ================= Submit =================
+  // ========== Open Face Scan Screen ==========
+  Future<void> _openFaceScan() async {
+    final result = await Navigator.pushNamed(
+      context,
+      "/face-scan-register",
+    );
+
+    if (!mounted) return;
+
+    // رجعنا بدون بيانات (Back) -> لا نعتبرها خطأ، بس نرجع عادي
+    if (result == null) {
+      return;
+    }
+
+    // نتأكد إنه Map<String, dynamic>
+    if (result is! Map) {
+      setState(() => _error = "Unexpected response from face scan.");
+      return;
+    }
+
+    final map = Map<String, dynamic>.from(result);
+    debugPrint("FACE SCAN RESULT: $map");
+
+    if (map["success"] != true) {
+      setState(() => _error = "Face scan failed. Try again.");
+      return;
+    }
+
+    // نتأكد إن السيرفر رجع faceUrl و embedding
+    if (map["faceUrl"] == null || map["embedding"] == null) {
+      setState(() => _error = "Face data is incomplete. Please scan again.");
+      return;
+    }
+
+    setState(() {
+      _faceUrl = map["faceUrl"] as String;
+      _faceEmbedding = map["embedding"] as List<dynamic>;
+      _error = null;
+    });
+  }
+
+  // ========== Submit Registration ==========
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
+
+    // لازم يكون الفيس سكان كامل
+    if (_faceUrl == null || _faceEmbedding == null) {
+      setState(() => _error = "Please scan your face before registering.");
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -75,6 +126,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     });
 
     try {
+      // 1. Create basic profile
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -82,19 +134,24 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         name: _name.text.trim(),
       );
 
+      // 2. Register Firebase User
       final cred = await AuthService.registerWithEmail(
         email: _email.text.trim(),
         password: _pass.text,
         profile: profile,
       );
 
-      final uid = cred.user?.uid;
-      if (uid == null) throw Exception('Registration failed: UID is null.');
+      final uid = cred.user!.uid;
 
+      // 3. Save user info in Firestore
       await FS.createUser(uid, {
+        'name': _name.text.trim(),
         'dob': _dob.text.trim(),
         'civilNumber': _civil.text.trim(),
         'role': 'patient',
+        'email': _email.text.trim(),
+        'faceUrl': _faceUrl,
+        'faceEmbedding': _faceEmbedding,
       });
 
       if (!mounted) return;
@@ -107,11 +164,13 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
-  // ================= UI =================
+  // ========== UI ==========
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -138,7 +197,47 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
                 const SizedBox(height: 20),
 
-                // NAME
+                // 🌟 FACE SCAN BUTTON
+                ElevatedButton(
+                  onPressed: _openFaceScan,
+                  child: const Text("Scan Face"),
+                ),
+
+                const SizedBox(height: 8),
+
+                // حالة الفيس سكان (تم / لا)
+                Text(
+                  _faceUrl == null
+                      ? "No face scanned yet."
+                      : "Face scanned successfully.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _faceUrl == null
+                        ? Colors.grey
+                        : Colors.green.shade700,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // 🌟 Show scanned face preview
+                if (_faceUrl != null)
+                  Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.colorScheme.primary),
+                      image: DecorationImage(
+                        image: NetworkImage(_faceUrl!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+
+                // ====================== INPUTS ======================
                 AppInput(
                   controller: _name,
                   label: t.myName,
@@ -147,7 +246,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // DATE OF BIRTH
                 GestureDetector(
                   onTap: _pickDob,
                   child: AbsorbPointer(
@@ -162,7 +260,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // CIVIL NUMBER
                 AppInput(
                   controller: _civil,
                   label: t.civilNumber,
@@ -177,7 +274,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // EMAIL
                 AppInput(
                   controller: _email,
                   label: t.email,
@@ -189,7 +285,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // PASSWORD
                 PasswordInput(
                   controller: _pass,
                   label: t.password,
@@ -201,16 +296,18 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // CONFIRM PASSWORD
                 PasswordInput(
                   controller: _pass2,
                   label: t.confirmPassword,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return t.confirmPasswordRequired;
+                    if (v == null || v.isEmpty) {
+                      return t.confirmPasswordRequired;
+                    }
                     if (v != _pass.text) return t.passwordsNotMatch;
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 20),
 
                 if (_error != null)
@@ -219,6 +316,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                     child: Text(
                       _error!,
                       style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
                     ),
                   ),
 

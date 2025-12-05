@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../l10n/app_localizations.dart';
 
 class HeadAdminHospitalDetailsScreen extends StatelessWidget {
@@ -88,8 +90,7 @@ class HeadAdminHospitalDetailsScreen extends StatelessWidget {
                     '${t.email}: $email\n${t.phone}: $phone\n${t.city}: $city',
                     style: const TextStyle(color: Colors.white70),
                   ),
-                  trailing:
-                  const Icon(Icons.chevron_right, color: Colors.white),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -144,6 +145,36 @@ class HospitalStatsDetails extends StatelessWidget {
     };
   }
 
+  // -------- PDF GENERATOR --------
+  Future<void> _generatePdf(
+      BuildContext context,
+      Map<String, int> data,
+      ) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (ctx) => [
+          pw.Text(
+            "$hospName - Hospital Statistics Report",
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 20),
+
+          pw.Text("Doctors: ${data['doctors']}"),
+          pw.SizedBox(height: 8),
+          pw.Text("Patients: ${data['patients']}"),
+          pw.SizedBox(height: 8),
+          pw.Text("Appointments: ${data['appointments']}"),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -186,14 +217,40 @@ class HospitalStatsDetails extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              _statTile(t.doctors, data['doctors'] ?? 0,
-                  Icons.medical_information, theme.colorScheme.primary),
+              // -------- PDF BUTTON --------
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text("Download PDF"),
+                  onPressed: () async {
+                    await _generatePdf(context, data);
+                  },
+                ),
+              ),
 
-              _statTile(t.patients, data['patients'] ?? 0,
-                  Icons.people, theme.colorScheme.secondary),
+              const SizedBox(height: 20),
 
-              _statTile(t.appointments, data['appointments'] ?? 0,
-                  Icons.event, theme.colorScheme.tertiary),
+              _statTile(
+                t.doctors,
+                data['doctors'] ?? 0,
+                Icons.medical_information,
+                theme.colorScheme.primary,
+              ),
+
+              _statTile(
+                t.patients,
+                data['patients'] ?? 0,
+                Icons.people,
+                theme.colorScheme.secondary,
+              ),
+
+              _statTile(
+                t.appointments,
+                data['appointments'] ?? 0,
+                Icons.event,
+                theme.colorScheme.tertiary,
+              ),
             ],
           );
         },
@@ -201,8 +258,7 @@ class HospitalStatsDetails extends StatelessWidget {
     );
   }
 
-  Widget _statTile(
-      String title, int value, IconData icon, Color color) {
+  Widget _statTile(String title, int value, IconData icon, Color color) {
     final textColor =
     ThemeData.estimateBrightnessForColor(color) == Brightness.dark
         ? Colors.white
@@ -215,8 +271,7 @@ class HospitalStatsDetails extends StatelessWidget {
         leading: Icon(icon, color: textColor),
         title: Text(
           title,
-          style:
-          TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         trailing: Text(
           "$value",

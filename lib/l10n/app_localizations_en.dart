@@ -24,6 +24,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboard => 'Dashboard';
 
   @override
+  String get enterAddressManually => 'Enter address manually';
+
+  @override
+  String get pickDateRange => 'Select date range';
+
+  @override
+  String get medicineNotes => 'Notes';
+
+  @override
+  String get daysPassed => 'Days passed';
+
+  @override
+  String get remaining => 'Remaining';
+
+  @override
+  String get dateRange => 'Date range';
+
+  @override
   String get confirm_password => 'Confirm Password';
 
   @override
@@ -565,9 +583,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get medicineDays => 'Days';
-
-  @override
-  String get medicineNotes => 'Notes';
 
   @override
   String get medicineNameHint => 'Medicine name';
