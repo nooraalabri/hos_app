@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import '../screens/FaceScanRegisterScreen.dart';
 import 'qr_page.dart';
 import 'ui.dart';
 
@@ -28,6 +29,9 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   final _condition = TextEditingController();
   final _allergy = TextEditingController();
   final _meds = TextEditingController();
+
+  String? faceUrl;
+  List<dynamic>? faceEmbedding;
 
   final List<String> bloodTypes = [
     'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'
@@ -181,6 +185,9 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           _bloodType = data['bloodType'] ?? '';
         }
 
+        faceUrl = data['faceUrl'];
+        faceEmbedding = data['faceEmbedding'];
+
         _chronic.text =
             ((data['chronic'] as List?)?.cast<String>() ?? []).join(', ');
         _condition.text = data['generalCondition'] ?? '';
@@ -195,21 +202,18 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _edit ? t.editProfile : t.myProfile,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
+                      Text(_edit ? t.editProfile : t.myProfile,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w600)),
                       IconButton(
-                        icon: Icon(
-                          _edit ? Icons.close : Icons.edit,
-                          color: cs.primary,
-                        ),
-                        onPressed: () => setState(() => _edit = !_edit),
-                      ),
+                        icon: Icon(_edit ? Icons.close : Icons.edit,
+                            color: cs.primary),
+                        onPressed: ()=> setState(()=>_edit=!_edit),
+                      )
                     ],
                   ),
 
@@ -219,19 +223,85 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
-
                   _infoBox(t, email, cs),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
 
                   Text(t.medicalInfoDoctorOnly,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
-
                   _medicalBox(t, cs),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
+
+                  //=============== FACE RECOGNITION ===============
+                  Text("Face Recognition",
+                      style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+
+                  if(faceUrl == null) ...[
+                    PrimaryButton(
+                      text:"Register Face",
+                      onPressed:() async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_)=> FaceScanRegisterScreen(uid: uid)),
+                        );
+
+                        if(result!=null && result["success"]==true){
+                          await FirebaseFirestore.instance.collection("users").doc(uid).set({
+                            "faceUrl": result["faceUrl"],
+                            "faceEmbedding": result["embedding"],
+                          },SetOptions(merge:true));
+
+                          setState(() {
+                            faceUrl=result["faceUrl"];
+                            faceEmbedding=result["embedding"];
+                          });
+                          _snack("Face Registered Successfully ✓");
+                        }
+                      },
+                    )
+                  ]
+                  else ...[
+                    Text("Face Registered ✓",
+                        style: TextStyle(color: Colors.green,fontWeight: FontWeight.w600)),
+                    const SizedBox(height:10),
+                    Container(
+                      height:140,
+                      decoration:BoxDecoration(
+                        borderRadius:BorderRadius.circular(12),
+                        image:DecorationImage(image:NetworkImage(faceUrl!),fit:BoxFit.cover),
+                        border:Border.all(color:Colors.green,width:2),
+                      ),
+                    ),
+                    const SizedBox(height:8),
+                    PrimaryButton(
+                      filled:false,
+                      text:"Re-Scan Face",
+                      onPressed:() async {
+                        final result=await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_)=> FaceScanRegisterScreen(uid: uid)),
+                        );
+                        if(result!=null && result["success"]==true){
+                          await FirebaseFirestore.instance.collection("users").doc(uid).set({
+                            "faceUrl": result["faceUrl"],
+                            "faceEmbedding": result["embedding"],
+                          },SetOptions(merge:true));
+
+                          setState(() {
+                            faceUrl=result["faceUrl"];
+                            faceEmbedding=result["embedding"];
+                          });
+                          _snack("Face Updated Successfully ✓");
+                        }
+                      },
+                    )
+                  ],
+
+                  const SizedBox(height:28),
 
                   if (_edit) _editSection(uid, t, cs),
 
@@ -271,8 +341,8 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           _row(t.dob, _dob.text, cs),
           _row(t.email, email, cs),
           _row(t.phone, _phone.text, cs),
-          _row(t.weight, _weight.text, cs),
           _row(t.height, _height.text, cs),
+          _row(t.weight, _weight.text, cs),
           _row(t.bloodType, _bloodType, cs),
         ],
       ),
@@ -314,27 +384,6 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
         _field(t.phone, _phone, cs, keyboardType: TextInputType.phone),
         _field(t.weight, _weight, cs, keyboardType: TextInputType.number),
         _field(t.height, _height, cs, keyboardType: TextInputType.number),
-
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: DropdownButtonFormField<String>(
-            value: _bloodType.isEmpty ? null : _bloodType,
-            items: bloodTypes
-                .map((type) => DropdownMenuItem(
-              value: type,
-              child: Text(type),
-            ))
-                .toList(),
-            onChanged: (val) => setState(() => _bloodType = val ?? ''),
-            decoration: InputDecoration(
-              labelText: t.bloodType,
-              filled: true,
-              fillColor: cs.surfaceContainerHighest,
-              border:
-              OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
 
         const SizedBox(height: 12),
 
@@ -387,7 +436,8 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           Expanded(
             child: Text(
               val.isEmpty ? '—' : val,
-              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
+              style:
+              TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
             ),
           ),
         ],

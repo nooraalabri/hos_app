@@ -6,8 +6,7 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 
 class PatientFaceLoginScreen extends StatefulWidget {
-  final String uid;
-  const PatientFaceLoginScreen({super.key, required this.uid});
+  const PatientFaceLoginScreen({super.key});
 
   @override
   State<PatientFaceLoginScreen> createState() => _PatientFaceLoginScreenState();
@@ -21,7 +20,6 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
   bool faceDetected = false;
   String? error;
 
-  // ------------------------------ INIT
   @override
   void initState() {
     super.initState();
@@ -29,7 +27,6 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
     _initCamera();
   }
 
-  // ------------------------------ MLKit DETECTOR
   void _initDetector() {
     _detector = FaceDetector(
       options: FaceDetectorOptions(
@@ -40,19 +37,12 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
     );
   }
 
-  // ------------------------------ CAMERA
   Future<void> _initCamera() async {
     try {
       final cams = await availableCameras();
-      final front = cams.firstWhere(
-            (c) => c.lensDirection == CameraLensDirection.front,
-      );
+      final front = cams.firstWhere((c) => c.lensDirection == CameraLensDirection.front);
 
-      _controller = CameraController(
-        front,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
+      _controller = CameraController(front, ResolutionPreset.medium, enableAudio: false);
 
       await _controller!.initialize();
       if (mounted) setState(() {});
@@ -61,72 +51,70 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
     }
   }
 
-  // ------------------------------ CAPTURE
   Future<void> _capture() async {
-    if (loading) return;
+    if (loading || _controller == null) return;
 
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+      error = null;
+    });
 
     try {
       final pic = await _controller!.takePicture();
       final bytes = await pic.readAsBytes();
 
-      // Detect face
       final input = InputImage.fromFilePath(pic.path);
       final faces = await _detector.processImage(input);
 
       if (faces.isEmpty) {
         setState(() {
           faceDetected = false;
-          loading = false;
           error = "No face detected. Try again.";
+          loading = false;
         });
         return;
       }
 
       faceDetected = true;
-
       await _sendToServer(bytes);
-
     } catch (e) {
-      setState(() => error = "Error: $e");
+      setState(() {
+        error = "Error: $e";
+        loading = false;
+      });
     }
-
-    setState(() => loading = false);
   }
 
-  // ------------------------------ SEND IMAGE TO FLASK
   Future<void> _sendToServer(Uint8List bytes) async {
     final base64Img = base64Encode(bytes);
 
     try {
       final resp = await http.post(
-        Uri.parse("http://192.168.31.56:5000/face-login"),
+        Uri.parse("http://192.168.31.57:5000/face-login"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "uid": widget.uid,
-          "image": base64Img,
-        }),
+        body: jsonEncode({"image": base64Img}),
       );
-
-      if (resp.statusCode != 200) {
-        setState(() => error = "Server error: ${resp.statusCode}");
-        return;
-      }
 
       final json = jsonDecode(resp.body);
 
-      if (json["success"] == true) {
-        Navigator.pop(context, {"success": true, "uid": widget.uid});
+      if (resp.statusCode == 200 && json["success"] == true) {
+        final uid = json["uid"];
+
+        Navigator.pop(context, {"success": true, "uid": uid});
       } else {
-        setState(() => error = "Face not recognized");
+        setState(() {
+          error = json["message"] ?? "Face not recognized";
+          loading = false;
+        });
       }
     } catch (e) {
-      setState(() => error = "Network error: $e");
+      setState(() {
+        error = "Network error: $e";
+        loading = false;
+      });
     }
   }
 
-  // ------------------------------ DISPOSE
   @override
   void dispose() {
     _controller?.dispose();
@@ -134,13 +122,10 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
     super.dispose();
   }
 
-  // ------------------------------ UI
   @override
   Widget build(BuildContext context) {
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -148,23 +133,21 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
         children: [
           CameraPreview(_controller!),
 
-          // ------------------ CIRCLE
           Align(
             alignment: Alignment.center,
             child: Container(
-              width: 280,
-              height: 280,
+              width: 500,        // ← تم التكبير
+              height: 500,       // ← تم التكبير
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: faceDetected ? Colors.green : Colors.white,
-                  width: 4,
+                  width: 5,
                 ),
               ),
             ),
           ),
 
-          // ------------------ TEXT
           Positioned(
             bottom: 80,
             left: 0,
@@ -173,7 +156,7 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
               child: Text(
                 faceDetected ? "Face Detected ✓" : "Align your face",
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   color: faceDetected ? Colors.green : Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -181,7 +164,6 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
             ),
           ),
 
-          // ------------------ ERROR MSG
           if (error != null)
             Positioned(
               top: 60,
@@ -190,14 +172,10 @@ class _PatientFaceLoginScreenState extends State<PatientFaceLoginScreen> {
               child: Text(
                 error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 18,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 18),
               ),
             ),
 
-          // ------------------ LOGIN BUTTON
           Positioned(
             bottom: 20,
             left: 0,

@@ -138,19 +138,15 @@ class AppRoutes {
 
     // Face Recognition
     faceLogin: (_) {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
-      return FaceScanScreen(
-        uid: uid,
-        apiUrl: "http://192.168.31.56:5000/face-login",
-        isRegister: false,
-      );
+      return const PatientFaceLoginScreen();   // بدون uid ولا apiUrl
     },
+
 
     faceRegister: (_) {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       return FaceScanScreen(
         uid: uid,
-        apiUrl: "http://192.168.31.56:5000/face-register",
+        apiUrl: "http://192.168.31.57:5000/face-register",
         isRegister: true,
       );
     },

@@ -6,13 +6,9 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 
 class FaceScanRegisterScreen extends StatefulWidget {
-  // تقدرِين حالياً تخلي uid اختياري أو ترسلي أي قيمة مؤقتة
   final String uid;
 
-  const FaceScanRegisterScreen({
-    super.key,
-    required this.uid,
-  });
+  const FaceScanRegisterScreen({super.key, required this.uid});
 
   @override
   State<FaceScanRegisterScreen> createState() => _FaceScanRegisterScreenState();
@@ -32,7 +28,7 @@ class _FaceScanRegisterScreenState extends State<FaceScanRegisterScreen> {
     _initCamera();
   }
 
-  // -------------------- MLKit Setup
+  // ------------------- MLKit detector
   void _initDetector() {
     _detector = FaceDetector(
       options: FaceDetectorOptions(
@@ -43,124 +39,97 @@ class _FaceScanRegisterScreenState extends State<FaceScanRegisterScreen> {
     );
   }
 
-  // -------------------- Camera Setup
+  // ------------------- Camera setup
   Future<void> _initCamera() async {
     final cams = await availableCameras();
-    final front = cams.firstWhere(
-          (c) => c.lensDirection == CameraLensDirection.front,
-    );
+    final front =
+    cams.firstWhere((c) => c.lensDirection == CameraLensDirection.front);
 
-    _controller = CameraController(
-      front,
-      ResolutionPreset.medium,
-      enableAudio: false,
-    );
+    _controller = CameraController(front, ResolutionPreset.medium,
+        enableAudio: false);
 
     await _controller!.initialize();
-    if (mounted) {
-      setState(() {});
-    }
+    setState(() {});
   }
 
-  // -------------------- Capture & Detect
+  // ------------------- Capture photo
   Future<void> _capture() async {
     if (loading) return;
-
-    setState(() => loading = true);
+    loading = true;
+    setState(() {});
 
     try {
-      // 1) خذ صورة من الكاميرا
       final pic = await _controller!.takePicture();
-
-      // بعض الأجهزة تحتاج delay بسيط
-      await Future.delayed(const Duration(milliseconds: 200));
-
       final bytes = await pic.readAsBytes();
 
-      // 2) ML Kit face detection
       final input = InputImage.fromFilePath(pic.path);
       final faces = await _detector.processImage(input);
 
       if (faces.isEmpty) {
-        setState(() {
-          faceDetected = false;
-          loading = false;
-        });
-
+        loading = false;
+        faceDetected = false;
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No face detected")),
+          const SnackBar(content: Text("No face detected, try again")),
         );
         return;
       }
 
-      // على الأقل وجه واحد
       faceDetected = true;
       setState(() {});
 
-      // 3) أرسل الصورة للسيرفر
       await _sendToServer(bytes);
+
     } catch (e) {
-      debugPrint("ERROR in _capture: $e");
-      if (mounted) {
-        setState(() => loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error capturing face: $e")),
-        );
-      }
+      loading = false;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
   }
 
-  // -------------------- Send to server
+  // ------------------- Send Base64 to Python server
   Future<void> _sendToServer(Uint8List bytes) async {
     final base64Img = base64Encode(bytes);
 
     try {
       final resp = await http.post(
-        Uri.parse("http://192.168.31.56:5000/face-register"),
+        Uri.parse("http://192.168.31.57:5000/face-register"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "uid": widget.uid, // لو السيرفر ما يحتاجه بيطنّشه
-          "image": base64Img,
-        }),
+        body: jsonEncode({"uid": widget.uid, "image": base64Img}),
       );
 
-      if (resp.statusCode != 200) {
-        if (mounted) {
-          setState(() => loading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Server error: ${resp.statusCode}")),
-          );
-        }
+      print("📥 SERVER RAW RESPONSE: ${resp.body}");
+
+      final data = jsonDecode(resp.body);
+
+      // -------- SUCCESS RESPONSE
+      if (resp.statusCode == 200 && data["success"] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Face registered successfully ✓")),
+        );
+
+        Navigator.pop(context, {
+          "success": true,
+          "faceUrl": data["faceUrl"],
+          "embedding": data["embedding"],
+        });
         return;
       }
 
-      final data = jsonDecode(resp.body);
-      debugPrint("FACE REGISTER RESPONSE: $data");
+      // -------- FAILED
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Face registration failed, try again")),
+      );
 
-      if (data["success"] == true) {
-        // 👈 هنا أهم نقطة:
-        // لازم نرجع faceUrl و embedding إلى RegisterPatientScreen
-        Navigator.pop(context, {
-          "success": true,
-          "faceUrl": data["faceUrl"],       // تأكدي السيرفر يرجع نفس الإسم
-          "embedding": data["embedding"],   // نفس الشي هنا
-        });
-      } else {
-        if (mounted) {
-          setState(() => loading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to register face")),
-          );
-        }
-      }
+      setState(() => loading = false);
+
     } catch (e) {
-      debugPrint("ERROR in _sendToServer: $e");
-      if (mounted) {
-        setState(() => loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Network error: $e")),
-        );
-      }
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Network Error: $e")),
+      );
     }
   }
 
@@ -171,25 +140,25 @@ class _FaceScanRegisterScreenState extends State<FaceScanRegisterScreen> {
     super.dispose();
   }
 
-  // -------------------- UI
+  // ------------------- UI
   @override
   Widget build(BuildContext context) {
     if (!(_controller?.value.isInitialized ?? false)) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          CameraPreview(_controller!),
+          Positioned.fill(child: CameraPreview(_controller!)),
 
+          // ----- Face circle indicator -----
           Align(
             alignment: Alignment.center,
             child: Container(
-              width: 280,
-              height: 280,
+              width: MediaQuery.of(context).size.width * 0.75,
+              height: MediaQuery.of(context).size.width * 0.75,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -200,35 +169,39 @@ class _FaceScanRegisterScreenState extends State<FaceScanRegisterScreen> {
             ),
           ),
 
+          // ----- Status text -----
           Positioned(
-            bottom: 80,
+            top: 70,
             left: 0,
             right: 0,
-            child: Center(
-              child: Text(
-                faceDetected ? "Face Detected ✓" : "Align your face",
-                style: TextStyle(
-                  fontSize: 22,
-                  color: faceDetected ? Colors.green : Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+            child: Text(
+              faceDetected ? "Face Detected ✓" : "Align your face inside the circle",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: faceDetected ? Colors.green : Colors.white,
               ),
             ),
           ),
 
+          // ----- Button -----
           Positioned(
-            bottom: 20,
+            bottom: 70,
             left: 0,
             right: 0,
             child: Center(
               child: ElevatedButton(
                 onPressed: loading ? null : _capture,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 18),
+                ),
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Register Face"),
+                    : const Text("Register Face", style: TextStyle(fontSize: 20)),
               ),
             ),
-          ),
+          )
         ],
       ),
     );

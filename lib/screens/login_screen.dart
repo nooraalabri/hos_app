@@ -43,53 +43,34 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = null;
       });
 
-      // نفتح صفحة Face Scan
-      final result = await Navigator.pushNamed(
+      final result = await Navigator.pushNamed(context, "/face-scan-login");
+
+      if (result == null || result is! Map || result["success"] != true) {
+        setState(() {
+          _loading = false;
+          _error = "Face not recognized. Try again.";
+        });
+        return;
+      }
+
+      final uid = result["uid"];   // السيرفر يرجع UID
+      if (uid == null) {
+        setState(() => _error = "No UID returned");
+        return;
+      }
+
+      await _saveFcmToken(uid);
+
+      // 🚀 بعد نجاح الوجه → يفتح شاشة QR مباشرة مع تمرير uid
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        "/face-scan-login",
+        AppRoutes.patientQR,
+            (route) => false,
+        arguments: {
+          "uid": uid,
+          "fromFace": true,   // حتى إذا رجع يروح Login
+        },
       );
-
-      if (result == null || result is! Map) {
-        setState(() => _loading = false);
-        return;
-      }
-
-      final success = result["success"] == true;
-      final uid = result["uid"];
-      final msg = result["message"];
-
-      if (!success) {
-        setState(() => _error = msg ?? "Face not recognized.");
-        return;
-      }
-
-      // قراءة بيانات المستخدم
-      final doc = await FirebaseFirestore.instance.collection("users").doc(uid).get();
-
-      if (!doc.exists) {
-        setState(() => _error = "User not found.");
-        return;
-      }
-
-      final role = doc["role"];
-
-      // توجيه حسب role
-      switch (role) {
-        case "patient":
-          _go(AppRoutes.patientHome);
-          break;
-        case "doctor":
-          _go(AppRoutes.doctorHome);
-          break;
-        case "hospitaladmin":
-          _go(AppRoutes.hospitalAdminHome);
-          break;
-        case "headadmin":
-          _go(AppRoutes.headAdminHome);
-          break;
-        default:
-          setState(() => _error = "Unknown role");
-      }
 
     } catch (e) {
       setState(() => _error = e.toString());
@@ -105,7 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final t = AppLocalizations.of(context)!;
 
     if (!_form.currentState!.validate()) return;
-
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -141,36 +121,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final role = doc.data()?['role'] as String?;
 
-      // حفظ FCM Token
       await _saveFcmToken(uid);
 
       if (!mounted) return;
 
       switch (role) {
-        case 'headadmin':
-          _go(AppRoutes.headAdminHome);
-          break;
-        case 'hospitaladmin':
-          _go(AppRoutes.hospitalAdminHome);
-          break;
-        case 'doctor':
-          _go(AppRoutes.doctorHome);
-          break;
-        case 'patient':
-          _go(AppRoutes.patientHome);
-          break;
-
-        default:
-          setState(() => _error = t.unknownRole);
+        case 'headadmin':   _go(AppRoutes.headAdminHome);  break;
+        case 'hospitaladmin': _go(AppRoutes.hospitalAdminHome); break;
+        case 'doctor':      _go(AppRoutes.doctorHome);    break;
+        case 'patient':     _go(AppRoutes.patientHome);   break;
+        default: setState(() => _error = t.unknownRole);
       }
 
     } on FirebaseAuthException catch (e) {
       String msg = t.loginFailed;
-
       if (e.code == 'user-not-found') msg = t.noAccountForEmail;
       if (e.code == 'wrong-password') msg = t.incorrectPassword;
       if (e.code == 'invalid-credential') msg = t.invalidCredential;
-
       setState(() => _error = msg);
 
     } catch (e) {
@@ -275,10 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: theme.colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -291,9 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 15),
 
-                  // ------------------------------
-                  // 🔵 FACE LOGIN BUTTON
-                  // ------------------------------
+                  // 🔵 Face Login Button
                   TextButton(
                     onPressed: _loading ? null : _loginWithFace,
                     child: Text(

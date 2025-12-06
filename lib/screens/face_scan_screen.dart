@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 
 class FaceScanScreen extends StatefulWidget {
-  final String apiUrl;     // example: http://192.168.1.12:5000/face-login
-  final String uid;        // المستخدم الحالي
-  final bool isRegister;   // true = register, false = login
+  final String apiUrl;
+  final String uid;
+  final bool isRegister;
 
   const FaceScanScreen({
     super.key,
@@ -25,9 +24,9 @@ class _FaceScanScreenState extends State<FaceScanScreen> {
   CameraController? _controller;
   late FaceDetector _detector;
 
-  bool loading = false;
   bool faceDetected = false;
   bool processing = false;
+  bool sending = false;
 
   @override
   void initState() {
@@ -36,7 +35,7 @@ class _FaceScanScreenState extends State<FaceScanScreen> {
     _initCamera();
   }
 
-  // ========================= ML KIT SETUP
+  // MLKit Setup
   void _initDetector() {
     _detector = FaceDetector(
       options: FaceDetectorOptions(
@@ -47,69 +46,71 @@ class _FaceScanScreenState extends State<FaceScanScreen> {
     );
   }
 
-  // ========================= CAMERA INIT
+  // Camera Setup
   Future<void> _initCamera() async {
     final cams = await availableCameras();
     final front = cams.firstWhere(
           (c) => c.lensDirection == CameraLensDirection.front,
     );
 
-    _controller = CameraController(
-      front,
-      ResolutionPreset.medium,
-      enableAudio: false,
-    );
+    _controller = CameraController(front, ResolutionPreset.high, enableAudio: false);
 
     await _controller!.initialize();
     setState(() {});
   }
 
-  // ========================= CAPTURE & DETECT FACE
-  Future<void> _captureAndSend() async {
-    if (loading || processing) return;
+  // Capture + Detect + Send
+  Future<void> _captureAndVerify() async {
+    if (processing || sending) return;
+
     processing = true;
+    setState(() {});
 
     try {
-      // 1) التقط صورة
-      final file = await _controller!.takePicture();
-      final bytes = await file.readAsBytes();
+      // Capture photo
+      final pic = await _controller!.takePicture();
+      final bytes = await pic.readAsBytes();
 
-      // 2) تحويل للصيغة التي يفهمها MLKit
-      final inputImage = InputImage.fromFilePath(file.path);
-
-      // 3) تحقق من وجود وجه
-      final faces = await _detector.processImage(inputImage);
+      // Face detection
+      final input = InputImage.fromFilePath(pic.path);
+      final faces = await _detector.processImage(input);
 
       if (faces.isEmpty) {
         faceDetected = false;
         processing = false;
         setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No face detected — try again')),
+        );
         return;
       }
 
-      // -------------------- Face OK
       faceDetected = true;
       setState(() {});
 
-      // 4) إرسال إلى السيرفر
       await _sendToServer(bytes);
 
     } catch (e) {
-      print("ERROR: $e");
+      print('ERROR: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
 
     processing = false;
+    setState(() {});
   }
 
-  // ========================= SEND TO SERVER
-  Future<void> _sendToServer(Uint8List bytes) async {
-    setState(() => loading = true);
+  Future<void> _sendToServer(List<int> bytes) async {
+    sending = true;
+    setState(() {});
 
     final base64Img = base64Encode(bytes);
 
-    final body = widget.isRegister
-        ? {"uid": widget.uid, "image": base64Img}
-        : {"uid": widget.uid, "image": base64Img};
+    final body = {
+      "uid": widget.uid,
+      "image": base64Img,
+    };
 
     try {
       final resp = await http.post(
@@ -120,22 +121,20 @@ class _FaceScanScreenState extends State<FaceScanScreen> {
 
       final json = jsonDecode(resp.body);
 
-      if (json["success"] == true) {
-        Navigator.pop(context, {"success": true, "uid": widget.uid});
+      if (json['success'] == true) {
+        Navigator.pop(context, true);
       } else {
-        setState(() => loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Face not recognized")),
-        );
+        _msg("Face not recognized — retry");
       }
     } catch (e) {
-      print("SEND ERROR: $e");
-      setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Server Error: $e")),
-      );
+      _msg("Server Error: $e");
     }
+
+    sending = false;
+    setState(() {});
   }
+
+  void _msg(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   @override
   void dispose() {
@@ -144,66 +143,60 @@ class _FaceScanScreenState extends State<FaceScanScreen> {
     super.dispose();
   }
 
-  // ========================= UI
   @override
   Widget build(BuildContext context) {
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          CameraPreview(_controller!),
+          Positioned.fill(child: CameraPreview(_controller!)),
 
-          // Middle Circle Frame
+          // Face Circle
           Align(
             alignment: Alignment.center,
             child: Container(
-              width: 280,
-              height: 280,
+              width: MediaQuery.of(context).size.width * 0.75,
+              height: MediaQuery.of(context).size.width * 0.75,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: faceDetected ? Colors.green : Colors.white,
-                  width: 4,
+                  width: 5,
                 ),
               ),
             ),
           ),
 
-          // Text status
           Positioned(
-            bottom: 110,
+            top: 60,
             left: 0,
             right: 0,
             child: Center(
               child: Text(
-                faceDetected
-                    ? "Face Detected ✓"
-                    : "Align your face inside the circle",
+                faceDetected ? "Face Detected ✓" : "Align your face in the circle",
                 style: TextStyle(
-                  color: faceDetected ? Colors.green : Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
+                  color: faceDetected ? Colors.green : Colors.white,
                 ),
               ),
             ),
           ),
 
-          // Capture Button
           Positioned(
-            bottom: 40,
+            bottom: 60,
             left: 0,
             right: 0,
             child: Center(
               child: ElevatedButton(
-                onPressed: loading ? null : _captureAndSend,
-                child: loading
+                onPressed: sending ? null : _captureAndVerify,
+                child: sending
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(widget.isRegister ? "Register Face" : "Login"),
+                    : Text(widget.isRegister ? "Register Face" : "Login", style: const TextStyle(fontSize: 20)),
               ),
             ),
           ),
