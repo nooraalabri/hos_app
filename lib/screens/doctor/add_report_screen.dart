@@ -27,9 +27,7 @@ class _AddReportState extends State<AddReport> {
   final _allergies = TextEditingController();
   bool _saving = false;
 
-  /// medicines now includes name, dosage, notes, startDate, endDate
   final List<Map<String, dynamic>> _medicines = [];
-
   final _db = FirebaseFirestore.instance;
 
   @override
@@ -79,10 +77,7 @@ class _AddReportState extends State<AddReport> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.appBarTheme.backgroundColor,
-        title: Text(
-          t.reportAddUpdate,
-          style: theme.appBarTheme.titleTextStyle,
-        ),
+        title: Text(t.reportAddUpdate, style: theme.appBarTheme.titleTextStyle),
         iconTheme: theme.appBarTheme.iconTheme,
       ),
       body: Form(
@@ -91,43 +86,30 @@ class _AddReportState extends State<AddReport> {
           padding: const EdgeInsets.all(20),
           children: [
             Text(t.generalReport,
-                style: theme.textTheme.titleMedium!.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
+                style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
             TextFormField(
               controller: _general,
               maxLines: 3,
               decoration: _input(t.generalReportHint),
-              validator: (v) =>
-              v == null || v.isEmpty ? t.generalReportRequired : null,
+              validator: (v) => v == null || v.isEmpty ? t.generalReportRequired : null,
             ),
 
             const SizedBox(height: 20),
 
             Text(t.patientMedicalInfo,
-                style: theme.textTheme.titleMedium!.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
+                style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
-            TextFormField(
-              controller: _chronic,
-              decoration: _input(t.chronicHint),
-            ),
+            TextFormField(controller: _chronic, decoration: _input(t.chronicHint)),
             const SizedBox(height: 10),
 
-            TextFormField(
-              controller: _allergies,
-              decoration: _input(t.allergyHint),
-            ),
+            TextFormField(controller: _allergies, decoration: _input(t.allergyHint)),
             const SizedBox(height: 20),
 
             Text(t.medicineSection,
-                style: theme.textTheme.titleMedium!.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
+                style: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
             _medicineTable(t),
@@ -137,42 +119,102 @@ class _AddReportState extends State<AddReport> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: _saving ? null : _submitReport,
               child: _saving
-                  ? const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-                  : Text(
-                t.saveReport,
-                style: TextStyle(
-                  color: theme.colorScheme.onPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+                  ? const SizedBox(height: 22, width: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(t.saveReport,
+                  style: TextStyle(color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold, fontSize: 16)),
             ),
 
             const SizedBox(height: 30),
 
-            Text(
-              t.previousReports,
-              style: theme.textTheme.titleLarge!.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(t.previousReports,
+                style: theme.textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
 
+            // 🔥 هنا الدالة المعدّلة
             _previousReports(t),
           ],
         ),
       ),
     );
   }
+
+  // ==========================================================
+  // 🔥 نسخة حديثة من previousReports تعرض الأدوية داخل كل تقرير
+  // ==========================================================
+
+  Widget _previousReports(AppLocalizations t) {
+    final theme = Theme.of(context);
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _db
+          .collection('reports')
+          .where('patientId', isEqualTo: widget.patientId)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (snap.data!.docs.isEmpty) return Text(t.noReports);
+
+        return Column(
+          children: snap.data!.docs.map((doc) {
+            final d = doc.data() as Map<String, dynamic>;
+            final meds = d['medicationsList'] ?? [];
+            final ts = d['createdAt'] as Timestamp?;
+            final date = ts != null
+                ? "${ts.toDate().year}-${ts.toDate().month}-${ts.toDate().day}"
+                : '—';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(d['report'] ?? t.noDetails,
+                        style: theme.textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text("${t.dateLabel}: $date",
+                        style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                    const SizedBox(height: 6),
+
+                    if (meds.isNotEmpty) ...[
+                      Text("${t.medications}:",
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+
+                      ...meds.map<Widget>((m) => Text(
+                        "- ${m['name']} (${m['dosage']})",
+                        style: const TextStyle(fontSize: 13),
+                      )),
+                      const SizedBox(height: 6),
+                    ],
+                  ],
+                ),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 18, color: theme.colorScheme.primary),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportDetails(reportData: d, reportId: doc.id),
+                    ),
+                  );
+                },
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  // 🔽 باقي كودك كما هو دون تعديل
 
   Future<void> _submitReport() async {
     final t = AppLocalizations.of(context)!;
@@ -247,19 +289,19 @@ class _AddReportState extends State<AddReport> {
     }
   }
 
+  // ==========================================================
+  // باقي الأكواد بدون تغييرات
+  // ==========================================================
+
   Widget _medicineTable(AppLocalizations t) {
     final theme = Theme.of(context);
-
     return Column(
       children: [
         Container(
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
-            ],
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,2))],
           ),
           child: Table(
             border: TableBorder.all(color: theme.dividerColor),
@@ -272,9 +314,7 @@ class _AddReportState extends State<AddReport> {
             },
             children: [
               TableRow(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                ),
+                decoration: BoxDecoration(color: theme.colorScheme.primary),
                 children: [
                   _TableHeader(t.medicineName),
                   _TableHeader(t.medicineDosage),
@@ -288,209 +328,85 @@ class _AddReportState extends State<AddReport> {
                 final med = entry.value;
 
                 return TableRow(
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                  ),
+                  decoration: BoxDecoration(color: theme.cardColor),
                   children: [
-                    _TableCell(
-                      TextFormField(
-                        controller: med['name'],
-                        decoration: _miniInput(t.medicineNameHint),
-                        validator: (v) =>
-                        v == null || v.isEmpty ? t.requiredField : null,
-                      ),
-                    ),
-                    _TableCell(
-                      TextFormField(
-                        controller: med['dosage'],
-                        decoration: _miniInput(t.medicineDosageHint),
-                      ),
-                    ),
-
-                    /// Calendar Picker
-                    _TableCell(
-                      Column(
-                        children: [
-                          Text(
-                            med['start'] == null
-                                ? t.pickDateRange
+                    _TableCell(TextFormField(controller: med['name'], decoration: _miniInput(t.medicineNameHint), validator: (v)=>v!.isEmpty?t.requiredField:null)),
+                    _TableCell(TextFormField(controller: med['dosage'], decoration: _miniInput(t.medicineDosageHint))),
+                    _TableCell(Column(
+                      children: [
+                        Text(
+                            med['start']==null ? t.pickDateRange
                                 : "${med['start'].day}/${med['start'].month}/${med['start'].year} → ${med['end'].day}/${med['end'].month}/${med['end'].year}",
-                            style: const TextStyle(fontSize: 11),
-                            textAlign: TextAlign.center,
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              final range = await showDateRangePicker(
-                                context: context,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2100),
-                              );
-                              if (range != null) {
-                                setState(() {
-                                  med['start'] = range.start;
-                                  med['end'] = range.end;
-                                });
-                              }
-                            },
-                            child: Text(
-                              t.pickDateRange,
-                              style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 11),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    _TableCell(
-                      TextFormField(
-                        controller: med['notes'],
-                        decoration: _miniInput(t.medicineNotesHint),
-                      ),
-                    ),
-
-                    _TableCell(
-                      IconButton(
-                        icon: Icon(Icons.delete,
-                            color: theme.colorScheme.error),
-                        onPressed: () => _removeMedicineRow(i),
-                      ),
-                    ),
+                            style: const TextStyle(fontSize: 11), textAlign: TextAlign.center),
+                        TextButton(
+                          onPressed: () async {
+                            final range = await showDateRangePicker(
+                                context: context, firstDate: DateTime(2020), lastDate: DateTime(2100)
+                            );
+                            if(range!=null){ setState((){ med['start']=range.start; med['end']=range.end;}); }
+                          },
+                          child: Text(t.pickDateRange, style: TextStyle(color: theme.colorScheme.primary,fontSize: 11)),
+                        )
+                      ],
+                    )),
+                    _TableCell(TextFormField(controller: med['notes'], decoration:_miniInput(t.medicineNotesHint))),
+                    _TableCell(IconButton(icon:Icon(Icons.delete,color:theme.colorScheme.error), onPressed:()=>_removeMedicineRow(i))),
                   ],
                 );
               }),
             ],
           ),
         ),
-
         const SizedBox(height: 10),
-
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             onPressed: _addMedicineRow,
-            icon: Icon(Icons.add_circle_outline,
-                color: theme.colorScheme.primary),
-            label: Text(
-              t.addMedicine,
-              style: TextStyle(color: theme.colorScheme.primary),
-            ),
+            icon: Icon(Icons.add_circle_outline,color:theme.colorScheme.primary),
+            label: Text(t.addMedicine,style: TextStyle(color:theme.colorScheme.primary)),
           ),
         )
       ],
     );
   }
 
-  Widget _previousReports(AppLocalizations t) {
-    final theme = Theme.of(context);
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: _db
-          .collection('reports')
-          .where('patientId', isEqualTo: widget.patientId)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.data!.docs.isEmpty) {
-          return Text(t.noReports);
-        }
-
-        return Column(
-          children: snap.data!.docs.map((doc) {
-            final d = doc.data() as Map<String, dynamic>;
-            final ts = d['createdAt'] as Timestamp?;
-            final date = ts != null
-                ? "${ts.toDate().year}-${ts.toDate().month}-${ts.toDate().day}"
-                : '—';
-
-            return Card(
-              color: theme.cardColor,
-              child: ListTile(
-                title: Text(d['report'] ?? t.noDetails),
-                subtitle: Text("${t.dateLabel}: $date"),
-                trailing: Icon(Icons.arrow_forward_ios,
-                    size: 16, color: theme.colorScheme.primary),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            ReportDetails(reportData: d, reportId: doc.id)),
-                  );
-                },
-              ),
-            );
-          }).toList(),
-        );
-      },
+  InputDecoration _input(String hint){
+    final theme=Theme.of(context);
+    return InputDecoration(
+      hintText: hint, filled:true, fillColor:theme.inputDecorationTheme.fillColor,
+      border:OutlineInputBorder(borderRadius:BorderRadius.circular(10),borderSide:BorderSide(color:theme.colorScheme.primary)),
+      hintStyle:TextStyle(color:theme.hintColor),
     );
   }
 
-  InputDecoration _input(String hint) {
-    final theme = Theme.of(context);
-
+  InputDecoration _miniInput(String hint){
+    final theme=Theme.of(context);
     return InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: theme.inputDecorationTheme.fillColor,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: theme.colorScheme.primary,
-        ),
-      ),
-      hintStyle: TextStyle(color: theme.hintColor),
-    );
-  }
-
-  InputDecoration _miniInput(String hint) {
-    final theme = Theme.of(context);
-
-    return InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: theme.inputDecorationTheme.fillColor,
-      contentPadding:
-      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-      border: InputBorder.none,
-      hintStyle: TextStyle(color: theme.hintColor),
+      hintText:hint,filled:true,fillColor:theme.inputDecorationTheme.fillColor,
+      contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:10),
+      border:InputBorder.none,hintStyle:TextStyle(color:theme.hintColor),
     );
   }
 }
 
-class _TableHeader extends StatelessWidget {
+class _TableHeader extends StatelessWidget{
   final String text;
   const _TableHeader(this.text);
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+  Widget build(BuildContext context){
+    final theme=Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(6),
-      child: Center(
-        child: Text(
-          text,
-          style: theme.textTheme.bodyMedium!.copyWith(
-            color: theme.colorScheme.onPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
-      ),
+      padding:const EdgeInsets.all(6),
+      child:Center(child:Text(text,style:theme.textTheme.bodyMedium!.copyWith(color:theme.colorScheme.onPrimary,fontWeight:FontWeight.bold,fontSize:13))),
     );
   }
 }
 
-class _TableCell extends StatelessWidget {
+class _TableCell extends StatelessWidget{
   final Widget child;
   const _TableCell(this.child);
 
   @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.all(4), child: child);
+  Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(4),child:child);
 }

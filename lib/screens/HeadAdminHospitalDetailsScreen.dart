@@ -131,19 +131,26 @@ class HospitalStatsDetails extends StatelessWidget {
         .get();
 
     final doctors = users.docs.where((d) => d['role'] == 'doctor').length;
-    final patients = users.docs.where((d) => d['role'] == 'patient').length;
 
+    // ❗ احصاء المرضى عبر appointments وليس users
     final appointments = await FirebaseFirestore.instance
         .collection('appointments')
         .where('hospitalId', isEqualTo: hospId)
         .get();
 
+    // استخراج المرضى المميزين بدون تكرار
+    final patientIds = appointments.docs
+        .map((d) => d['patientId'])
+        .toSet()
+        .length;
+
     return {
       'doctors': doctors,
-      'patients': patients,
+      'patients': patientIds,
       'appointments': appointments.size,
     };
   }
+
 
   // -------- PDF GENERATOR --------
   Future<void> _generatePdf(

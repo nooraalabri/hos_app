@@ -43,8 +43,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
   void initState() {
     super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    _futureProfile =
-        FirebaseFirestore.instance.collection('users').doc(uid).get();
+    _futureProfile = FirebaseFirestore.instance.collection('users').doc(uid).get();
   }
 
   @override
@@ -64,18 +63,17 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
-    final minAllowed = now.subtract(const Duration(days: 7));
+    final minAllowed = now.subtract(const Duration(days: 7)); // آخر حد 7 أيام
 
     final picked = await showDatePicker(
       context: context,
       initialDate: now.subtract(const Duration(days: 365 * 20)),
       firstDate: DateTime(1900),
-      lastDate: minAllowed,
+      lastDate: minAllowed, // يمنع اختيار تاريخ خلال آخر 7 أيام
     );
 
     if (picked != null) {
-      _dob.text =
-      '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      _dob.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       setState(() {});
     }
   }
@@ -101,22 +99,21 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       final weight = int.tryParse(_weight.text.trim());
       final height = int.tryParse(_height.text.trim());
 
-      if (weight == null ||
-          height == null ||
-          weight <= 0 ||
-          height <= 0 ||
-          weight > 999 ||
-          height > 999) {
+      if (weight == null || height == null || weight <= 0 || height <= 0 || weight > 999 || height > 999) {
         _snack(t.weightHeightInvalid);
         return;
       }
 
+      // --------✔ التحقق الصحيح لتاريخ الميلاد ✔--------
       final dobDate = DateTime.tryParse(_dob.text.trim());
-      if (dobDate == null ||
-          dobDate.isAfter(DateTime.now().subtract(const Duration(days: 7)))) {
-        _snack(t.dob7days);
+      final today = DateTime.now();
+      final sevenDaysAgo = today.subtract(const Duration(days: 7));
+
+      if (dobDate == null || dobDate.isAfter(today) || dobDate.isAfter(sevenDaysAgo)) {
+        _snack("Birth date must be older than 7 days and cannot be in the future");
         return;
       }
+      // --------------------------------------------------
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'name': _name.text.trim(),
@@ -132,9 +129,9 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       if (mounted) {
         setState(() => _edit = false);
         _snack(t.profileUpdated);
-        _futureProfile =
-            FirebaseFirestore.instance.collection('users').doc(uid).get();
+        _futureProfile = FirebaseFirestore.instance.collection('users').doc(uid).get();
       }
+
     } catch (e) {
       _snack('${t.error}: $e');
     } finally {
@@ -156,40 +153,24 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
     return FutureBuilder(
       future: _futureProfile,
       builder: (ctx, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snap.hasData || !snap.data!.exists) {
-          return Center(child: Text(t.profileNotFound));
-        }
+        if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData || !snap.data!.exists) return Center(child: Text(t.profileNotFound));
 
         final data = snap.data!.data() ?? {};
-        final email =
-            data['email'] ?? FirebaseAuth.instance.currentUser?.email ?? '';
+        final email = data['email'] ?? FirebaseAuth.instance.currentUser?.email ?? '';
 
         if (_name.text.isEmpty) _name.text = data['name'] ?? '';
         if (_civil.text.isEmpty) _civil.text = data['civilNumber'] ?? '';
         if (_dob.text.isEmpty) _dob.text = data['dob'] ?? '';
         if (_phone.text.isEmpty) _phone.text = data['phone'] ?? '';
-
-        if (_weight.text.isEmpty) {
-          _weight.text = data['weight']?.toString() ?? '';
-        }
-
-        if (_height.text.isEmpty) {
-          _height.text = data['height']?.toString() ?? '';
-        }
-
-        if (_bloodType.isEmpty) {
-          _bloodType = data['bloodType'] ?? '';
-        }
+        if (_weight.text.isEmpty) _weight.text = data['weight']?.toString() ?? '';
+        if (_height.text.isEmpty) _height.text = data['height']?.toString() ?? '';
+        if (_bloodType.isEmpty) _bloodType = data['bloodType'] ?? '';
 
         faceUrl = data['faceUrl'];
         faceEmbedding = data['faceEmbedding'];
 
-        _chronic.text =
-            ((data['chronic'] as List?)?.cast<String>() ?? []).join(', ');
+        _chronic.text = ((data['chronic'] as List?)?.cast<String>() ?? []).join(', ');
         _condition.text = data['generalCondition'] ?? '';
         _allergy.text = data['allergies'] ?? '';
         _meds.text = data['medications'] ?? '';
@@ -207,37 +188,26 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(_edit ? t.editProfile : t.myProfile,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w600)),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                       IconButton(
-                        icon: Icon(_edit ? Icons.close : Icons.edit,
-                            color: cs.primary),
+                        icon: Icon(_edit ? Icons.close : Icons.edit, color: cs.primary),
                         onPressed: ()=> setState(()=>_edit=!_edit),
                       )
                     ],
                   ),
 
                   const SizedBox(height: 14),
-
-                  Text(t.personalInfo,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(t.personalInfo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
                   _infoBox(t, email, cs),
 
                   const SizedBox(height: 18),
-
-                  Text(t.medicalInfoDoctorOnly,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(t.medicalInfoDoctorOnly, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 6),
                   _medicalBox(t, cs),
 
                   const SizedBox(height: 22),
-
-                  //=============== FACE RECOGNITION ===============
-                  Text("Face Recognition",
-                      style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold)),
+                  Text("Face Recognition", style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
 
                   if(faceUrl == null) ...[
@@ -265,8 +235,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                     )
                   ]
                   else ...[
-                    Text("Face Registered ✓",
-                        style: TextStyle(color: Colors.green,fontWeight: FontWeight.w600)),
+                    Text("Face Registered ✓",style: TextStyle(color: Colors.green,fontWeight: FontWeight.w600)),
                     const SizedBox(height:10),
                     Container(
                       height:140,
@@ -285,6 +254,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                           context,
                           MaterialPageRoute(builder: (_)=> FaceScanRegisterScreen(uid: uid)),
                         );
+
                         if(result!=null && result["success"]==true){
                           await FirebaseFirestore.instance.collection("users").doc(uid).set({
                             "faceUrl": result["faceUrl"],
@@ -318,6 +288,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
                         ),
                       ),
                     ),
+
                 ],
               ),
             ),
@@ -372,41 +343,26 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Divider(color: cs.outline, height: 30),
-
         _field(t.name, _name, cs),
         _field(t.civilNumber, _civil, cs, keyboardType: TextInputType.number),
-
-        GestureDetector(
-          onTap: _pickDob,
-          child: AbsorbPointer(child: _field(t.dob, _dob, cs)),
-        ),
-
+        GestureDetector(onTap: _pickDob, child: AbsorbPointer(child: _field(t.dob, _dob, cs))),
         _field(t.phone, _phone, cs, keyboardType: TextInputType.phone),
         _field(t.weight, _weight, cs, keyboardType: TextInputType.number),
         _field(t.height, _height, cs, keyboardType: TextInputType.number),
-
         const SizedBox(height: 12),
 
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            PrimaryButton(
-              filled: false,
-              text: t.cancel,
-              onPressed: () => setState(() => _edit = false),
-            ),
-            PrimaryButton(
-              text: _saving ? t.saving : t.save,
-              onPressed: _saving ? null : () => _save(uid),
-            ),
+            PrimaryButton(filled: false,text: t.cancel,onPressed: () => setState(() => _edit = false)),
+            PrimaryButton(text: _saving ? t.saving : t.save,onPressed: _saving ? null : () => _save(uid)),
           ],
         ),
       ],
     );
   }
 
-  Widget _field(String label, TextEditingController c, ColorScheme cs,
-      {TextInputType? keyboardType}) {
+  Widget _field(String label, TextEditingController c, ColorScheme cs,{TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
@@ -416,9 +372,7 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
           labelText: label,
           filled: true,
           fillColor: cs.surfaceContainerHighest,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -429,15 +383,11 @@ class _ProfilePageBodyState extends State<ProfilePageBody> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(
-            width: 150,
-            child: Text(key, style: TextStyle(color: cs.onSurface)),
-          ),
+          SizedBox(width: 150, child: Text(key, style: TextStyle(color: cs.onSurface))),
           Expanded(
             child: Text(
               val.isEmpty ? '—' : val,
-              style:
-              TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
+              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
             ),
           ),
         ],

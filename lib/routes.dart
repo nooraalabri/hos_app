@@ -56,7 +56,6 @@ import 'package:hos_app/screens/settings_screen.dart';
 import 'package:hos_app/screens/change_password.dart';
 
 import 'admin/hospital_doctor_reports_screen.dart';
-import 'admin/hospital_patient_reports_screen.dart';
 
 // ==========================================================
 
@@ -156,7 +155,6 @@ class AppRoutes {
 
     // Home
     headAdminHome: (_) => const HeadAdminHome(),
-    hospitalPatientReports: (_) => const HospitalPatientReportsScreen(),
     addDoctorByAdmin: (_) => const AddDoctorByAdminScreen(),
 
 

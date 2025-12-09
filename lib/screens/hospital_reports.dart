@@ -166,11 +166,6 @@ class _HospitalReportsScreenState extends State<HospitalReportsScreen> {
 
                 const SizedBox(height: 12),
 
-                // ✅ هنا التعديل المهم
-                _bigButton(context, t.patientReports,
-                    icon: Icons.people,
-                    onTap: () => Navigator.pushNamed(
-                        context, AppRoutes.hospitalPatientReports)),
               ],
             ),
           );
