@@ -21,7 +21,7 @@ class _HeadAdminReportsScreenState extends State<HeadAdminReportsScreen> {
       appBar: AppBar(
         backgroundColor: theme.colorScheme.primary,
         title: Text(
-          "Dashboard",   // ←← تم التغيير هنا
+          t.dashboard,
           style: TextStyle(color: theme.colorScheme.onPrimary),
         ),
         iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),

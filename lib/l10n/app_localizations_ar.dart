@@ -42,6 +42,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dateRange => 'مدة الدواء';
 
   @override
+  String get cannotCreatePastShift => 'لا يمكن إنشاء شفت في وقت سابق';
+
+  @override
   String get confirm_password => 'تأكيد كلمة المرور';
 
   @override

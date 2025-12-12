@@ -166,33 +166,30 @@ class FS {
   }
 
   static Stream<QuerySnapshot<Map<String, dynamic>>> pendingDoctorsStream(
-      String hospitalId) =>
-      doctorsStream(hospitalId, approved: false);
+      String hospitalId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'doctor')
+        .where('hospitalId', isEqualTo: hospitalId)
+        .where('status', isEqualTo: 'pending') // ← هذا هو المفتاح
+        .snapshots();
+  }
+
 
   static Future<void> decideDoctor({
     required String doctorUid,
-    required bool approve,
+    required String status, // pending | approved | rejected
   }) async {
-    final ref = users.doc(doctorUid);
-    final snap = await ref.get();
-    if (!snap.exists) return;
-
-    final data = snap.data()!;
-    final doctorEmail = (data['email'] ?? '').toString();
-    final doctorName = (data['name'] ?? '').toString();
-    final hospitalName = (data['hospitalName'] ?? '').toString();
-
-    await ref.set({'approved': approve}, SetOptions(merge: true));
-
-    if (doctorEmail.isNotEmpty) {
-      await NotifyService.notifyDoctorDecision(
-        toEmail: doctorEmail,
-        doctorName: doctorName,
-        hospitalName: hospitalName,
-        approved: approve,
-      );
-    }
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(doctorUid)
+        .update({
+      'status': status,
+      'approved': status == 'approved',
+    });
   }
+
+
 
   static Future<void> deleteDoctor(String doctorUid) async {
     await users.doc(doctorUid).delete();

@@ -11,6 +11,7 @@
   "daysPassed": "Days passed",
   "remaining": "Remaining",
   "dateRange": "Date range",
+  "cannotCreatePastShift": "You cannot create a shift in the past",
   "confirm_password": "Confirm Password",
   "welcome": "Welcome",
   "welcome_back": "Welcome back",

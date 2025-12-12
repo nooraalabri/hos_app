@@ -42,6 +42,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dateRange => 'Date range';
 
   @override
+  String get cannotCreatePastShift => 'You cannot create a shift in the past';
+
+  @override
   String get confirm_password => 'Confirm Password';
 
   @override

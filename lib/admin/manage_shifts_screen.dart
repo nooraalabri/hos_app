@@ -237,6 +237,23 @@ class _ManageShiftsScreenState extends State<ManageShiftsScreen> {
                   );
                   return;
                 }
+                final now = DateTime.now();
+
+                final shiftStart = DateTime(
+                  _selectedDate!.year,
+                  _selectedDate!.month,
+                  _selectedDate!.day,
+                  _start!.hour,
+                  _start!.minute,
+                );
+
+                if (shiftStart.isBefore(now)) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(t.cannotCreatePastShift)),
+                  );
+                  return;
+                }
+
 
                 setState(() => _saving = true);
                 try {

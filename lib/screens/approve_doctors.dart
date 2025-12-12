@@ -53,7 +53,6 @@ class ApproveDoctorsScreen extends StatelessWidget {
             centerTitle: true,
             iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
           ),
-
           body: StreamBuilder(
             stream: FS.pendingDoctorsStream(hospitalId),
             builder: (context, snap) {
@@ -79,9 +78,8 @@ class ApproveDoctorsScreen extends StatelessWidget {
                 return Center(
                   child: Text(
                     t.no_pending_doctors,
-                    style: theme.textTheme.bodyLarge!.copyWith(
-                      color: theme.hintColor,
-                    ),
+                    style: theme.textTheme.bodyLarge!
+                        .copyWith(color: theme.hintColor),
                   ),
                 );
               }
@@ -99,7 +97,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
                   return Card(
                     color: theme.cardColor,
-                    shadowColor: theme.shadowColor.withValues(alpha:0.2),
+                    shadowColor: theme.shadowColor.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -120,11 +118,9 @@ class ApproveDoctorsScreen extends StatelessWidget {
                           const SizedBox(height: 6),
                           Text(
                             email,
-                            style: theme.textTheme.bodyMedium!.copyWith(
-                              color: theme.hintColor,
-                            ),
+                            style: theme.textTheme.bodyMedium!
+                                .copyWith(color: theme.hintColor),
                           ),
-
                           const SizedBox(height: 14),
 
                           // ===== ACTION BUTTONS =====
@@ -136,7 +132,7 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                 onPressed: () async {
                                   await FS.decideDoctor(
                                     doctorUid: doctorId,
-                                    approve: true,
+                                    status: 'approved',
                                   );
 
                                   await NotifyService.sendEmail(
@@ -146,6 +142,8 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                     "${t.approved_email_text}\n\n${t.hospital_admin}",
                                   );
 
+                                  if (!context.mounted) return;
+
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       backgroundColor:
@@ -153,20 +151,18 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                       content: Text(
                                         '${t.doctor_approved_msg} - $name',
                                         style: TextStyle(
-                                          color: theme.colorScheme.onPrimary,
+                                          color:
+                                          theme.colorScheme.onPrimary,
                                         ),
                                       ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.colorScheme.primary,
-                                  foregroundColor: theme.colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                                  backgroundColor:
+                                  theme.colorScheme.primary,
+                                  foregroundColor:
+                                  theme.colorScheme.onPrimary,
                                 ),
                                 child: Text(
                                   t.accept,
@@ -174,14 +170,15 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
-
                               const SizedBox(width: 12),
 
                               // REJECT
                               ElevatedButton(
                                 onPressed: () async {
                                   await FS.decideDoctor(
-                                      doctorUid: doctorId, approve: false);
+                                    doctorUid: doctorId,
+                                    status: 'rejected',
+                                  );
 
                                   await NotifyService.sendEmail(
                                     to: email,
@@ -190,30 +187,27 @@ class ApproveDoctorsScreen extends StatelessWidget {
                                     "${t.rejected_email_text}\n\n${t.hospital_admin}",
                                   );
 
+                                  if (!context.mounted) return;
+
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor:
-                                      theme.colorScheme.errorContainer,
+                                      backgroundColor: theme
+                                          .colorScheme.errorContainer,
                                       content: Text(
                                         '${t.doctor_rejected_msg} - $name',
                                         style: TextStyle(
-                                          color:
-                                          theme.colorScheme.onErrorContainer,
+                                          color: theme.colorScheme
+                                              .onErrorContainer,
                                         ),
                                       ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                  theme.colorScheme.errorContainer,
-                                  foregroundColor:
-                                  theme.colorScheme.onErrorContainer,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                                  backgroundColor: theme
+                                      .colorScheme.errorContainer,
+                                  foregroundColor: theme
+                                      .colorScheme.onErrorContainer,
                                 ),
                                 child: Text(
                                   t.reject,

@@ -61,6 +61,7 @@
   "doctor_profile": "ملف الطبيب",
   "hospital_profile": "ملف المستشفى",
   "patient_profile": "ملف المريض",
+  "cannotCreatePastShift": "لا يمكن إنشاء شفت في وقت سابق",
   "home": "الصفحة الرئيسية",
   "dashboard": "لوحة التحكم",
   "my_shifts": "مناوباتي",

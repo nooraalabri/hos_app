@@ -164,6 +164,12 @@ abstract class AppLocalizations {
   /// **'Date range'**
   String get dateRange;
 
+  /// No description provided for @cannotCreatePastShift.
+  ///
+  /// In en, this message translates to:
+  /// **'You cannot create a shift in the past'**
+  String get cannotCreatePastShift;
+
   /// No description provided for @confirm_password.
   ///
   /// In en, this message translates to:
