@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../l10n/app_localizations.dart';
 import 'ui.dart';
-import 'patient_drawer.dart';
+import '../l10n/app_localizations.dart';
+import '../routes.dart';
 
 class QRPage extends StatelessWidget {
   static const route = '/patient/qr';
@@ -11,81 +10,121 @@ class QRPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get patient ID from FirebaseAuth first, then try route arguments
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final patientId = currentUser?.uid ?? 
-        (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['uid'] ??
-        (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['id'] ??
-        (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?)?['patientId'] ??
-        '';
+    final t = AppLocalizations.of(context)!;
+
+    // استلام بيانات المريض من الـ LoginScreen (Face Login)
+    final Map<String, dynamic> data =
+    (ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {});
+
+    final patientId = data['uid'] ?? data['id'] ?? data['patientId'] ?? '';
+    final bool fromFace = data['fromFace'] == true; // لو جاي من Face Recognition
 
     if (patientId.isEmpty) {
       return AppScaffold(
-        title: AppLocalizations.of(context)!.patient_qr_code,
-        drawer: const PatientDrawer(),
+        title: t.patientQr,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                AppLocalizations.of(context)!.patient_id_not_found,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please make sure you are logged in',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          child: Text(
+            t.patientIdNotFound,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.dark,
+            ),
           ),
         ),
       );
     }
 
-    //  عنوان صفحة المريض على Firebase Hosting
-    // = غيّري هذا الرابط حسب اسم مشروعك في Firebase Hosting
-    final url =
-        'https://hospital-appointment-51250.web.app/patient.html?id=$patientId';
+    // 🔗 رابط صفحة بيانات المريض في الويب
+    final url = "https://hospital-appointment-51250.web.app/patient.html?id=$patientId";
 
-    return AppScaffold(
-      title: AppLocalizations.of(context)!.patient_qr_code,
-      drawer: const PatientDrawer(),
-      body: Center(
-        child: PrimaryCard(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              //  كود QR يحوي رابط صفحة المريض
-              QrImageView(
-                data: url,
-                version: QrVersions.auto,
-                size: 220,
-                backgroundColor: Colors.white,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppLocalizations.of(context)!.scan_qr_view_profile,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 12),
+    return PopScope(
+      canPop: !fromFace, // يمنع الرجوع لو جاء من Face Login
 
-              //  عرض الرابط أسفل الكود (قابل للنسخ)
-              SelectableText(
-                url,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.blueAccent,
-                  decoration: TextDecoration.underline,
+      onPopInvokedWithResult: (didPop, result) {
+        if (fromFace) {
+          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
+        }
+      },
+
+      child: AppScaffold(
+        title: t.patientQr,
+        drawer: fromFace ? null : null, // لو من الفيس لا Drawer
+
+        body: Center(
+          child: PrimaryCard(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ========= QR CODE =========
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: url,
+                    version: QrVersions.auto,
+                    size: 250,           // 👈 كبرت QR شوي
+                    backgroundColor: Colors.white,
+                  ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 18),
+
+                Text(
+                  t.scanQr,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                SelectableText(
+                  url,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.light,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // ================= BUTTON BEHAVIOR =================
+                fromFace
+                    ? ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, AppRoutes.login, (route) => false);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.white,
+                    foregroundColor: AppColors.dark,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 12),
+                  ),
+                  child: const Text("Back to Login"),
+                )
+                    : ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.white,
+                    foregroundColor: AppColors.dark,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 12),
+                  ),
+                  child: const Text("Back"),
+                ),
+              ],
+            ),
           ),
         ),
       ),

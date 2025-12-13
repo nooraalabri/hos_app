@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../l10n/app_localizations.dart';
 import 'add_report_screen.dart';
 
 class MyShiftsScreen extends StatefulWidget {
@@ -15,19 +16,25 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F2F3),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D515C),
-        title: const Text(
-          "Today's Appointments",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          t.todaysAppointments,
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
         elevation: 4,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -40,26 +47,26 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2D515C)),
+            return Center(
+              child: CircularProgressIndicator(color: theme.colorScheme.primary),
             );
           }
 
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
+                "${t.error} ${snapshot.error}",
+                style: TextStyle(color: theme.colorScheme.error),
               ),
             );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                "No appointments for today",
+                t.noAppointments,
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: theme.hintColor,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -75,34 +82,40 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
             itemBuilder: (context, i) {
               final data = appts[i].data() as Map<String, dynamic>;
               final apptId = appts[i].id;
-              final patientName = (data['patientName'] ?? 'Unknown').toString();
-              final hospitalName = (data['hospitalName'] ?? '').toString();
+
+              final patientName = (data['patientName'] ?? '-').toString();
+              final hospitalName = (data['hospitalName'] ?? '-').toString();
               final ts = data['time'] as Timestamp?;
+
               final apptDateStr = ts != null ? _formatDate(ts.toDate()) : '—';
               final apptTimeStr = ts != null ? _formatTime(ts.toDate()) : '—';
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2D515C),
+                  color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: ListTile(
                   title: Text(
                     patientName,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16),
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   subtitle: Text(
-                    "Date: $apptDateStr  •  Time: $apptTimeStr\nHospital: $hospitalName",
-                    style: const TextStyle(color: Colors.white70),
+                    "${t.date}: $apptDateStr  •  ${t.time}: $apptTimeStr\n${t.hospital}: $hospitalName",
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                    ),
                   ),
                   trailing: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF2D515C),
+                      backgroundColor: theme.colorScheme.onPrimary,
+                      foregroundColor: theme.colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -119,10 +132,12 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      "Add / Update Report",
-                      style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    child: Text(
+                      t.addUpdateReport,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   contentPadding:
@@ -136,14 +151,16 @@ class _MyShiftsScreenState extends State<MyShiftsScreen> {
     );
   }
 
-  // ======== تنسيق الوقت ========
+  // ===================== TIME FORMATTER =====================
+
   String _formatTime(DateTime t) {
     final h = t.hour.toString().padLeft(2, '0');
     final m = t.minute.toString().padLeft(2, '0');
     return "$h:$m";
   }
 
-  // ======== تنسيق التاريخ ========
+  // ===================== DATE FORMATTER =====================
+
   String _formatDate(DateTime t) {
     final y = t.year.toString().padLeft(4, '0');
     final mo = t.month.toString().padLeft(2, '0');

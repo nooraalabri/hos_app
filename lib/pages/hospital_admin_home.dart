@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../routes.dart';
 import '../widgets/admin_drawer.dart';
+import '../l10n/app_localizations.dart';
 
 class HospitalAdminHome extends StatelessWidget {
   const HospitalAdminHome({super.key});
@@ -11,42 +12,45 @@ class HospitalAdminHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: FS.hospitalForAdmin(uid),
       builder: (context, snap) {
         final loading = snap.connectionState == ConnectionState.waiting;
         final data = snap.data;
-        final name = (data?['name'] ?? 'Hospital Admin') as String;
-        final status = (data?['status'] ?? 'pending') as String;
+        final name = (data?['name'] ?? t.hospitalAdmin) as String;
+        final status = (data?['status'] ?? t.pending) as String;
 
         return Scaffold(
           drawer: AdminDrawer(hospitalName: name),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF2D515C),
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            ),
-            title: Text(
-              name,
-              style: const TextStyle(
-                color: Color(0xFFE6EBEC),
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
+            title: Text(name),
             centerTitle: true,
             actions: [
               IconButton(
-                tooltip: 'Logout',
+                tooltip: t.logout,
                 onPressed: () => AuthService.logoutAndGoWelcome(context),
-                icon: const Icon(Icons.logout, color: Colors.white),
+                icon: Icon(Icons.logout, color: cs.onPrimary),
               ),
             ],
           ),
+
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.addDoctorByAdmin),
+            icon: Icon(Icons.person_add_alt_1, color: cs.onPrimary),
+            label: Text(
+              t.addDoctor,
+              style: TextStyle(
+                color: cs.onPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+
           body: loading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
@@ -60,53 +64,41 @@ class HospitalAdminHome extends StatelessWidget {
               const SizedBox(height: 16),
 
               _HomeTile(
-                title: 'My profile',
-                subtitle: 'Hospital info & about',
+                title: t.myProfile,
+                subtitle: t.hospitalProfileSubtitle,
                 icon: Icons.person_outline,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.hospitalProfile),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.hospitalProfile),
               ),
               const SizedBox(height: 12),
 
               _HomeTile(
-                title: 'My staff',
-                subtitle: 'Manage doctors & details',
+                title: t.myStaff,
+                subtitle: t.myStaffSubtitle,
                 icon: Icons.badge_outlined,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.myStaff),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.myStaff),
               ),
               const SizedBox(height: 12),
 
               _HomeTile(
-                title: 'Reports',
-                subtitle: 'Weekly / Monthly / Yearly',
+                title: t.reports,
+                subtitle: t.reportsOverview,
                 icon: Icons.pie_chart_outline,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.hospitalReports),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.hospitalReports),
               ),
               const SizedBox(height: 12),
 
               _HomeTile(
-                title: 'Social Media',
-                subtitle: 'Post to Instagram, Facebook & Twitter',
+                title: t.social_media,
+                subtitle: '${t.post_to} Instagram, Facebook & Twitter',
                 icon: Icons.share,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.socialMedia),
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.socialMedia),
               ),
-
-              const SizedBox(height: 24),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            backgroundColor: const Color(0xFF2D515C),
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.regDoctor),
-            icon: const Icon(Icons.person_add_alt_1, color: Color(0xFFE6EBEC)),
-            label: const Text(
-              'Add doctor',
-              style: TextStyle(
-                color: Color(0xFFE6EBEC),
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-          ),
-
         );
       },
     );
@@ -125,29 +117,34 @@ class _HospitalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
+      color: cs.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: ListTile(
-          leading: const CircleAvatar(
+          leading: CircleAvatar(
             radius: 26,
-            backgroundColor: Color(0xFF2D515C),
-            child: Icon(Icons.local_hospital, color: Colors.white),
+            backgroundColor: isDark ? cs.primary : const Color(0xFF2D515C),
+            child: Icon(Icons.local_hospital, color: cs.onPrimary),
           ),
           title: Text(
             name,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 16,
-              color: Color(0xFF2D515C),
+              color: cs.primary,
             ),
           ),
           subtitle: email == null
               ? null
               : Text(
             email!,
-            style: const TextStyle(color: Colors.black54),
+            style:
+            TextStyle(color: cs.onSurface.withValues(alpha: 0.7)),
           ),
         ),
       ),
@@ -170,35 +167,57 @@ class _HomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2D515C),
+          color:
+          isDark ? cs.surfaceContainerHighest : const Color(0xFF2D515C),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 28),
+            Icon(
+              icon,
+              color:
+              isDark ? cs.onSurfaceVariant : Colors.white,
+              size: 28,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      )),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color:
+                      isDark ? cs.onSurfaceVariant : Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Colors.white70)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: isDark
+                          ? cs.onSurfaceVariant.withValues(alpha: 0.7)
+                          : Colors.white70,
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white),
+            Icon(
+              Icons.chevron_right,
+              color: isDark ? cs.onSurfaceVariant : Colors.white,
+            ),
           ],
         ),
       ),

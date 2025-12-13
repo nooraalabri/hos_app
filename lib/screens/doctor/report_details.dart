@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../../l10n/app_localizations.dart';
 
 class ReportDetails extends StatelessWidget {
   final Map<String, dynamic> reportData;
@@ -11,8 +14,88 @@ class ReportDetails extends StatelessWidget {
     required this.reportId,
   });
 
+  // ======================= PDF GENERATOR =======================
+
+  Future<void> _generatePdf(BuildContext context, AppLocalizations t) async {
+    final pdf = pw.Document();
+
+    final Timestamp? ts = reportData['createdAt'];
+    final String date = ts != null
+        ? "${ts.toDate().year}-${ts.toDate().month.toString().padLeft(2, '0')}-${ts.toDate().day.toString().padLeft(2, '0')}"
+        : '—';
+
+    final meds = reportData['medicationsList'] ?? [];
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (ctx) => [
+          pw.Text(
+            t.reportDetails,
+            style: pw.TextStyle(
+              fontSize: 22,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 20),
+
+          pw.Text("${t.reportDate}: $date"),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.generalReport,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(reportData['report'] ?? '—'),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.chronicDiseases,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(_formatList(reportData['chronic'])),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.allergies,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.Text(reportData['allergies'] ?? '—'),
+          pw.SizedBox(height: 12),
+
+          pw.Text(t.medications,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+
+          for (var m in meds) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              margin: const pw.EdgeInsets.only(bottom: 10),
+              decoration: pw.BoxDecoration(
+                borderRadius: pw.BorderRadius.circular(8),
+                border: pw.Border.all(),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("• ${m['name'] ?? ''}",
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Text("${t.dosage}: ${m['dosage'] ?? ''}"),
+                  pw.Text("${t.days}: ${m['days'] ?? ''}"),
+                  pw.Text("${t.notes}: ${m['notes'] ?? ''}"),
+                ],
+              ),
+            )
+          ],
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
+  // ======================= BUILD PAGE =======================
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     final Timestamp? ts = reportData['createdAt'];
     final String date = ts != null
         ? "${ts.toDate().year}-${ts.toDate().month.toString().padLeft(2, '0')}-${ts.toDate().day.toString().padLeft(2, '0')}"
@@ -20,51 +103,68 @@ class ReportDetails extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Report Details",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        backgroundColor: theme.colorScheme.primary,
+        title: Text(
+          t.reportDetails,
+          style: TextStyle(
+            color: theme.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: const Color(0xFF2D515C),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+
+        // ======== PDF Button ========
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            color: theme.colorScheme.onPrimary,
+            onPressed: () async {
+              await _generatePdf(context, t);
+            },
+          ),
+        ],
       ),
-      backgroundColor: const Color(0xFFE8F2F3),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade300,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
+                if (theme.brightness == Brightness.light)
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _title("Report Date"),
-                _value(date),
+                _title(t.reportDate, theme),
+                _value(date, theme),
                 const SizedBox(height: 12),
 
-                _title("General Report"),
-                _value(reportData['report'] ?? '—'),
+                _title(t.generalReport, theme),
+                _value(reportData['report'] ?? '—', theme),
                 const SizedBox(height: 12),
 
-                _title("Chronic Diseases"),
-                _value(_formatList(reportData['chronic'])),
+                _title(t.chronicDiseases, theme),
+                _value(_formatList(reportData['chronic']), theme),
                 const SizedBox(height: 12),
 
-                _title("Allergies"),
-                _value(reportData['allergies'] ?? '—'),
+                _title(t.allergies, theme),
+                _value(reportData['allergies'] ?? '—', theme),
                 const SizedBox(height: 12),
 
-                _title("Medications"),
-                _medList(context),
+                _title(t.medications, theme),
+                _medList(context, t, theme),
               ],
             ),
           ),
@@ -73,28 +173,34 @@ class ReportDetails extends StatelessWidget {
     );
   }
 
-  // ===== تنسيق العناوين =====
-  Widget _title(String text) {
+  // =======================  TITLES  =======================
+
+  Widget _title(String text, ThemeData theme) {
     return Text(
       text,
-      style: const TextStyle(
+      style: theme.textTheme.titleMedium!.copyWith(
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2D515C),
+        color: theme.colorScheme.primary,
         fontSize: 15,
       ),
     );
   }
 
-  // ===== تنسيق النصوص =====
-  Widget _value(String text) {
+  // =======================  VALUES  =======================
+
+  Widget _value(String text, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 15, color: Colors.black87),
+        style: theme.textTheme.bodyMedium!.copyWith(
+          fontSize: 15,
+        ),
       ),
     );
   }
+
+  // =======================  LIST FORMAT  =======================
 
   String _formatList(dynamic data) {
     if (data == null) return '—';
@@ -102,10 +208,16 @@ class ReportDetails extends StatelessWidget {
     return data.toString();
   }
 
-  // ===== عرض الأدوية =====
-  Widget _medList(BuildContext context) {
+  // =======================  MEDICINES LIST  =======================
+
+  Widget _medList(BuildContext context, AppLocalizations t, ThemeData theme) {
     final meds = reportData['medicationsList'] ?? [];
-    if (meds.isEmpty) return const Text('—', style: TextStyle(fontSize: 15));
+    if (meds.isEmpty) {
+      return Text(
+        '—',
+        style: theme.textTheme.bodyMedium!.copyWith(fontSize: 15),
+      );
+    }
 
     return Column(
       children: meds.map<Widget>((m) {
@@ -113,7 +225,7 @@ class ReportDetails extends StatelessWidget {
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFEDF4F4),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -121,14 +233,17 @@ class ReportDetails extends StatelessWidget {
             children: [
               Text(
                 "• ${m['name'] ?? ''}",
-                style: const TextStyle(
+                style: theme.textTheme.bodyLarge!.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
                 ),
               ),
-              Text("Dosage: ${m['dosage'] ?? ''}"),
-              Text("Days: ${m['days'] ?? ''}"),
-              Text("Notes: ${m['notes'] ?? ''}"),
+              Text("${t.dosage}: ${m['dosage'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
+              Text("${t.days}: ${m['days'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
+              Text("${t.notes}: ${m['notes'] ?? ''}",
+                  style: theme.textTheme.bodyMedium),
             ],
           ),
         );

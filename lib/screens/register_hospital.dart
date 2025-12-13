@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../l10n/app_localizations.dart';
+
 import '../widgets/app_input.dart';
 import '../widgets/password_input.dart';
 import '../services/auth_service.dart';
@@ -6,6 +9,7 @@ import '../services/firestore_service.dart';
 import '../services/notify_service.dart';
 import '../models/app_user.dart';
 import '../routes.dart';
+import 'location_picker.dart';
 
 class RegisterHospitalScreen extends StatefulWidget {
   const RegisterHospitalScreen({super.key});
@@ -16,11 +20,18 @@ class RegisterHospitalScreen extends StatefulWidget {
 
 class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
   final _form = GlobalKey<FormState>();
+
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   final _confirmPass = TextEditingController();
+  final _licenseNo = TextEditingController();
+  final _crNumber = TextEditingController();
+  final _phone = TextEditingController();
   final _location = TextEditingController();
+  final _website = TextEditingController();
+
+  LatLng? pickedLocation;
 
   bool _loading = false;
   String? _error;
@@ -31,31 +42,51 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     _email.dispose();
     _pass.dispose();
     _confirmPass.dispose();
+    _licenseNo.dispose();
+    _crNumber.dispose();
+    _phone.dispose();
     _location.dispose();
+    _website.dispose();
     super.dispose();
   }
 
-  bool _isStrong(String v) {
-    if (v.length < 8) return false;
-    final rUpper = RegExp(r'[A-Z]');
-    final rLower = RegExp(r'[a-z]');
-    final rNum = RegExp(r'\d');
-    final rSym = RegExp(r'[^\w\s]');
-    return rUpper.hasMatch(v) &&
-        rLower.hasMatch(v) &&
-        rNum.hasMatch(v) &&
-        rSym.hasMatch(v);
-  }
+  // ================= VALIDATION =================
+
+  bool _isStrong(String v) =>
+      RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^\w\s]).{8,}$').hasMatch(v);
+
+  bool _validHospitalName(String v) =>
+      RegExp(r'^[a-zA-Z0-9\u0621-\u064A ]{3,}$').hasMatch(v);
+
+  bool _validLicense(String v) => RegExp(r'^\d{5,8}$').hasMatch(v);
+
+  bool _validCR(String v) => RegExp(r'^\d{8}$').hasMatch(v);
+
+  bool _validOmanNumber(String v) => RegExp(r'^[279]\d{7}$').hasMatch(v);
+
+  bool _validWebsite(String v) =>
+      v.isEmpty || RegExp(r'^https?:\/\/').hasMatch(v);
+
+  // ================= SUBMIT =================
 
   Future<void> _submit() async {
+    final t = AppLocalizations.of(context)!;
+
     if (!_form.currentState!.validate()) return;
+
+    if (pickedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.required)),
+      );
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      // 🔹 إنشاء حساب hospitaladmin
       final profile = AppUser(
         uid: 'temp',
         email: _email.text.trim(),
@@ -71,57 +102,36 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
 
       final uid = cred.user!.uid;
 
-      // 🏥 إنشاء مستشفى جديد pending
       await FS.createHospital(
         name: _name.text.trim(),
         email: _email.text.trim(),
         uid: uid,
+        data: {
+          'licenseNumber': _licenseNo.text.trim(),
+          'crNumber': _crNumber.text.trim(),
+          'phone': _phone.text.trim(),
+          'website': _website.text.trim(),
+          'approved': false,
+          'createdAt': DateTime.now(),
+          'location': {
+            'lat': pickedLocation!.latitude,
+            'lng': pickedLocation!.longitude,
+          }
+        },
       );
 
-      // 👤 إنشاء user مربوط بالمستشفى + approved=false
       await FS.createUser(uid, {
         'role': 'hospitaladmin',
         'hospitalId': uid,
         'approved': false,
       });
 
-      // 📍 تحديث موقع المستشفى إذا متوفر
-      if (_location.text.trim().isNotEmpty) {
-        await FS.updateHospitalLocation(
-          uid,
-          address: _location.text.trim(),
-          city: null,
-          country: null,
-        );
-      }
-
-      // 📩 تنبيه الهيد أدمن عبر NotifyService
       try {
         await NotifyService.notifyHeadAdmin(_name.text.trim());
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Notification sent to Head Admin successfully.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        debugPrint("✅ HeadAdmin notified about hospital request");
-      } catch (e) {
-        debugPrint("⚠️ NotifyService error notifyHeadAdmin: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⚠️ Failed to notify Head Admin: $e'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
+      } catch (_) {}
 
       if (!mounted) return;
 
-      // ⏳ تحويل المستخدم لصفحة Pending Approval
       Navigator.pushNamedAndRemoveUntil(
         context,
         AppRoutes.pendingApproval,
@@ -131,8 +141,8 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
       setState(() => _error = e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error: $e'),
-          backgroundColor: Colors.red,
+          content: Text('Error: $e'),
+          backgroundColor: Colors.redAccent,
         ),
       );
     } finally {
@@ -140,8 +150,12 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
     }
   }
 
+  // ================= UI =================
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -151,95 +165,152 @@ class _RegisterHospitalScreenState extends State<RegisterHospitalScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Image.asset('assets/logo.png', height: 120),
-                ),
+                Center(child: Image.asset('assets/logo.png', height: 110)),
                 const SizedBox(height: 10),
 
                 Text(
-                  'Register Hospital',
+                  t.registerHospital,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 18),
 
                 AppInput(
                   controller: _name,
-                  label: 'Hospital Name',
-                  hint: 'Enter hospital name',
+                  label: t.hospitalName,
+                  hint: t.enterOfficialHospitalName,
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Required' : null,
+                  v != null && _validHospitalName(v) ? null : t.required,
+                ),
+                const SizedBox(height: 12),
+
+                AppInput(
+                  controller: _licenseNo,
+                  label: t.licenseNumber,
+                  validator: (v) =>
+                  v != null && _validLicense(v) ? null : t.licenseNumber,
+                ),
+                const SizedBox(height: 12),
+
+                AppInput(
+                  controller: _crNumber,
+                  label: t.crNumber,
+                  validator: (v) =>
+                  v != null && _validCR(v) ? null : t.crNumber,
+                ),
+                const SizedBox(height: 12),
+
+                AppInput(
+                  controller: _phone,
+                  label: t.phoneNumber,
+                  keyboardType: TextInputType.phone,
+                  validator: (v) => v != null && _validOmanNumber(v)
+                      ? null
+                      : t.enterValidNumber,
                 ),
                 const SizedBox(height: 12),
 
                 AppInput(
                   controller: _email,
-                  label: 'E-mail',
+                  label: t.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) =>
-                  (v == null || !v.contains('@')) ? 'Valid email required' : null,
+                  (v != null && v.contains('@'))
+                      ? null
+                      : t.validEmailRequired,
                 ),
                 const SizedBox(height: 12),
 
                 PasswordInput(
                   controller: _pass,
-                  label: 'Password',
-                  validator: (v) => (v != null && _isStrong(v))
-                      ? null
-                      : 'Min 8 chars, must include upper/lower/number/symbol',
+                  label: t.password,
+                  validator: (v) =>
+                  _isStrong(v ?? '') ? null : t.passwordRulesFull,
                 ),
                 const SizedBox(height: 12),
 
                 PasswordInput(
                   controller: _confirmPass,
-                  label: 'Confirm Password',
+                  label: t.confirmPassword,
                   validator: (v) =>
-                  (v == _pass.text) ? null : 'Passwords do not match',
+                  v == _pass.text ? null : t.passwordsDoNotMatch,
+                ),
+                const SizedBox(height: 12),
+
+                // LOCATION PICKER
+                GestureDetector(
+                  onTap: () async {
+                    final pos = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LocationPickerScreen(),
+                      ),
+                    );
+
+                    if (pos != null) {
+                      pickedLocation = pos;
+                      _location.text =
+                      "${pos.latitude}, ${pos.longitude}";
+                      setState(() {});
+                    }
+                  },
+                  child: AbsorbPointer(
+                    child: AppInput(
+                      controller: _location,
+                      label: t.addressLocation,
+                      hint: "Tap to pick location",
+                      validator: (v) =>
+                      v != null && v.isNotEmpty ? null : t.required,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
                 AppInput(
-                  controller: _location,
-                  label: 'Location',
-                  hint: 'Enter hospital address or location',
+                  controller: _website,
+                  label: t.websiteOptional,
+                  hint: "https://example.com",
                   validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Required' : null,
+                  _validWebsite(v ?? '') ? null : "Invalid URL",
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
                 if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
                   ),
+
+                const SizedBox(height: 10),
 
                 ElevatedButton(
                   onPressed: _loading ? null : _submit,
                   child: Padding(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: _loading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Sign up'),
+                        : Text(t.signUp),
                   ),
                 ),
-                const SizedBox(height: 20),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Already have an account? '),
-                    TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(
-                          context, AppRoutes.login),
-                      child: const Text('Login'),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 18),
+
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(t.alreadyHaveAccount),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushReplacementNamed(
+                                context, AppRoutes.login),
+                        child: Text(t.login),
+                      ),
+                    ],
+                  ),
+                )
               ],
             ),
           ),

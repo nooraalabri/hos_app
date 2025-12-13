@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../routes.dart';
 import '../widgets/app_button.dart';
 import '../providers/app_provider.dart';
-import '../l10n/app_localizations.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return SafeArea(
       child: Scaffold(
+        backgroundColor: cs.surface,
         body: Stack(
           children: [
             Center(
@@ -22,23 +25,41 @@ class WelcomeScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.assignment_turned_in_outlined, size: 140, color: Color(0xFF9AAAB2)),
+                    Icon(
+                      Icons.assignment_turned_in_outlined,
+                      size: 140,
+                      color: cs.primary.withValues(alpha: 0.7), // يشتغل على الدارك واللايت
+                    ),
+
                     const SizedBox(height: 24),
+
+                    // العنوان
                     Text(
-                      loc?.welcome ?? 'Hospital appointment',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      t.welcomeTitle,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: cs.onSurface,
+                      ),
                       textAlign: TextAlign.center,
                     ),
+
                     const SizedBox(height: 28),
+
+                    // زر تسجيل الدخول
                     AppButton(
-                      text: loc?.login ?? 'login',
+                      text: t.login,
                       onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
                     ),
+
                     const SizedBox(height: 16),
+
+                    // زر إنشاء حساب
                     AppButton(
-                      text: loc?.signup ?? 'sign up',
+                      text: t.signUp,
                       filled: false,
-                      onPressed: () => Navigator.pushNamed(context, AppRoutes.selectRole),
+                      onPressed: () => Navigator.pushNamed(
+                        context,
+                        AppRoutes.selectRole,
+                      ),
                     ),
                   ],
                 ),
@@ -62,10 +83,12 @@ class _LanguageSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
     final currentLang = appProvider.language;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
@@ -83,17 +106,19 @@ class _LanguageSwitcher extends StatelessWidget {
             label: 'English',
             isSelected: currentLang == 'en',
             onTap: () => appProvider.changeLanguage('en'),
+            cs: cs,
           ),
           Container(
             width: 1,
             height: 30,
-            color: Colors.grey.shade300,
+            color: cs.outlineVariant,
           ),
           _LanguageButton(
             code: 'ar',
             label: 'العربية',
             isSelected: currentLang == 'ar',
             onTap: () => appProvider.changeLanguage('ar'),
+            cs: cs,
           ),
         ],
       ),
@@ -106,12 +131,14 @@ class _LanguageButton extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final ColorScheme cs;
 
   const _LanguageButton({
     required this.code,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    required this.cs,
   });
 
   @override
@@ -126,7 +153,7 @@ class _LanguageButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? const Color(0xFF2D515C) : Colors.grey.shade600,
+            color: isSelected ? cs.primary : cs.onSurfaceVariant,
           ),
         ),
       ),

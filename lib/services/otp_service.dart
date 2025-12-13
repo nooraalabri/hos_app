@@ -28,9 +28,8 @@ class OtpService {
       debugPrint('FS.saveOtp error: $e\n$st');
     }
 
-    // Get base URL
     final base = emailApiBaseUrl ?? EmailApiConfig.baseUrl;
-    if (base.isNotEmpty) {
+    if (base != null && base.isNotEmpty) {
       unawaited(() async {
         try {
           await http

@@ -352,7 +352,7 @@ class _SocialMediaPostScreenState extends State<SocialMediaPostScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.facebook, color: Colors.blue, size: 20),
+              const Icon(Icons.facebook, color: Colors.blue, size: 20),
               const SizedBox(width: 8),
               Text(
                 platformStr.toUpperCase(),
@@ -451,3 +451,4 @@ class _SocialMediaPostScreenState extends State<SocialMediaPostScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+

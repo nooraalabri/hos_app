@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../routes.dart';
 import '../services/auth_service.dart';
-import '../l10n/app_localizations.dart';
 
 class PendingApprovalScreen extends StatefulWidget {
   const PendingApprovalScreen({super.key});
@@ -21,14 +21,16 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
     try {
       await AuthService.logout();
     } catch (_) {
-      // fallback
       await FirebaseAuth.instance.signOut();
     }
+
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.welcome, (_) => false);
   }
 
   Future<void> _checkAgain() async {
+    final t = AppLocalizations.of(context)!;
+
     setState(() {
       _checking = true;
       _error = null;
@@ -47,7 +49,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
       final userSnap = await usersRef.get();
 
       if (!userSnap.exists) {
-        setState(() => _error = 'User profile not found.');
+        setState(() => _error = t.userProfileNotFound);
         return;
       }
 
@@ -55,14 +57,13 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
       final role = (data['role'] ?? '').toString();
       final approved = (data['approved'] ?? false) == true;
 
-      // لو المستخدم أصلاً Approved → يروح للـ RoleRouter
       if (approved) {
         if (!mounted) return;
         Navigator.pushNamedAndRemoveUntil(context, AppRoutes.roleRouter, (_) => false);
         return;
       }
 
-      // لو Hospital Admin نتأكد من المستشفى كذلك
+      // 🔹 Hospital Admin auto-approval when hospital status changes
       if (role == 'hospitaladmin') {
         final hospId = data['hospitalId']?.toString();
         if (hospId != null && hospId.isNotEmpty) {
@@ -71,12 +72,10 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
               .doc(hospId)
               .get();
 
-          final hospApproved = hospSnap.exists &&
-              (hospSnap.data()?['status']?.toString() == 'approved');
+          final hospApproved =
+              hospSnap.exists && (hospSnap.data()?['status'] == 'approved');
 
-          // أحياناً الهيد أدمن يوافق المستشفى أولاً → نحدّث approved للمستخدم وننقله
           if (hospApproved) {
-            // المستخدم مسموح يعدّل نفسه حسب قواعدنا
             await usersRef.set({'approved': true}, SetOptions(merge: true));
             if (!mounted) return;
             Navigator.pushNamedAndRemoveUntil(context, AppRoutes.roleRouter, (_) => false);
@@ -85,7 +84,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
         }
       }
 
-      setState(() => _error = 'Still pending. Please try again later.');
+      setState(() => _error = t.stillPending);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -95,74 +94,106 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context)!;
+
     final email = FirebaseAuth.instance.currentUser?.email ?? '';
 
-    final loc = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(loc?.pending_approval ?? "Pending Approval"),
+        title: Text(
+          t.pendingApprovalTitle,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        backgroundColor: theme.colorScheme.primary,
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
         automaticallyImplyLeading: false,
       ),
+
+      backgroundColor: theme.scaffoldBackgroundColor,
+
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.hourglass_empty, size: 96, color: Colors.orange),
+            Icon(
+              Icons.hourglass_empty,
+              size: 96,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(height: 16),
+
             Text(
-              loc?.pending_approval ?? "Your request has been submitted!",
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              t.requestSubmitted,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 8),
             Text(
-              loc?.pending_approval ?? "We are reviewing your registration.\nYou will be notified once your request is approved.",
-              style: const TextStyle(fontSize: 16),
+              t.reviewingRegistration,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
+
             if (email.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text("Signed in as: $email",
-                  style: const TextStyle(color: Colors.black54)),
+              Text(
+                "${t.signedInAs} $email",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
+
             const SizedBox(height: 20),
+
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: theme.colorScheme.error),
                   textAlign: TextAlign.center,
                 ),
               ),
+
+            const SizedBox(height: 8),
+
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _checking ? null : _checkAgain,
                     icon: _checking
-                        ? const SizedBox(
+                        ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary,
+                      ),
                     )
                         : const Icon(Icons.refresh),
-                    label: Text(loc?.try_again ?? "Check again"),
+                    label: Text(t.checkAgain),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
+                      backgroundColor: theme.colorScheme.error,
+                      foregroundColor: theme.colorScheme.onError,
                     ),
                     onPressed: _logout,
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    label: Text(
-                      loc?.logout ?? "Logout",
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                    icon: const Icon(Icons.logout),
+                    label: Text(t.logout),
                   ),
                 ),
               ],

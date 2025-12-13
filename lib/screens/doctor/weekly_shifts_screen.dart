@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class ShiftsOverviewScreen extends StatelessWidget {
   final String doctorId;
@@ -8,40 +9,49 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFE8F2F3),
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D515C),
-          title: const Text(
-            "My Shifts",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          backgroundColor: theme.colorScheme.primary,
+          title: Text(
+            t.myShifts,
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
+          iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+          bottom: TabBar(
+            indicatorColor: theme.colorScheme.onPrimary,
+            labelColor: theme.colorScheme.onPrimary,
+            unselectedLabelColor: theme.colorScheme.onPrimary.withValues(alpha: 0.6),
             tabs: [
-              Tab(text: "Daily"),
-              Tab(text: "Weekly"),
-              Tab(text: "Monthly"),
+              Tab(text: t.daily),
+              Tab(text: t.weekly),
+              Tab(text: t.monthly),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            _buildShiftList(doctorId, 'daily'),
-            _buildShiftList(doctorId, 'weekly'),
-            _buildShiftList(doctorId, 'monthly'),
+            _buildShiftList(context, doctorId, 'daily'),
+            _buildShiftList(context, doctorId, 'weekly'),
+            _buildShiftList(context, doctorId, 'monthly'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildShiftList(String doctorId, String type) {
+  Widget _buildShiftList(BuildContext context, String doctorId, String type) {
+    final t = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     late final Stream<QuerySnapshot<Map<String, dynamic>>> stream;
     if (type == 'daily') {
       stream = FS.doctorShiftsDaily(doctorId);
@@ -55,23 +65,25 @@ class ShiftsOverviewScreen extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF2D515C)),
+          return Center(
+            child: CircularProgressIndicator(
+              color: theme.colorScheme.primary,
+            ),
           );
         }
 
         if (snapshot.hasError) {
-          return Center(
-              child: Text("Error: ${snapshot.error}",
-                  style: const TextStyle(color: Colors.red)));
+          return Center(child: Text("${t.error} ${snapshot.error}"));
         }
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-              "No shifts found",
-              style: TextStyle(color: Colors.black54, fontSize: 16),
+              t.noShifts,
+              style: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.hintColor,
+              ),
             ),
           );
         }
@@ -79,12 +91,14 @@ class ShiftsOverviewScreen extends StatelessWidget {
         final shifts = docs.map((d) {
           final data = d.data();
           final raw = data['dateTs'];
+
           Timestamp? ts;
           if (raw is Timestamp) ts = raw;
           else if (raw is String) {
             final parsed = DateTime.tryParse(raw);
             if (parsed != null) ts = Timestamp.fromDate(parsed);
           }
+
           return {
             'id': d.id,
             'date': data['date'] ?? '',
@@ -106,7 +120,7 @@ class ShiftsOverviewScreen extends StatelessWidget {
           itemCount: shifts.length,
           itemBuilder: (context, i) {
             final s = shifts[i];
-            final shiftId = s['id']; // 🟢 لازم كل appointment فيها shiftId
+            final shiftId = s['id'];
             final date = s['date'];
             final day = s['day'];
             final start = s['startTime'];
@@ -114,33 +128,34 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
             return Card(
               margin: const EdgeInsets.only(bottom: 14),
-              color: const Color(0xFF2D515C),
+              color: theme.colorScheme.primary,
+              elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              elevation: 3,
               child: ExpansionTile(
-                collapsedIconColor: Colors.white,
-                iconColor: Colors.white,
+                collapsedIconColor: theme.colorScheme.onPrimary,
+                iconColor: theme.colorScheme.onPrimary,
                 title: Text(
                   "$day • $date",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
                 subtitle: Text(
-                  "Time: $start - $end",
-                  style: const TextStyle(color: Colors.white70),
+                  "${t.timeLabel}: $start - $end",
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                  ),
                 ),
                 children: [
                   Container(
-                    color: Colors.white,
+                    color: theme.cardColor,
                     padding: const EdgeInsets.all(12),
                     width: double.infinity,
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      // ✅ تم التعديل هنا: نحصر البحث في المجموعة الرئيسية فقط
                       stream: FirebaseFirestore.instance
                           .collection('appointments')
                           .where('doctorId', isEqualTo: doctorId)
@@ -158,21 +173,25 @@ class ShiftsOverviewScreen extends StatelessWidget {
 
                         final appts = snap.data?.docs ?? [];
                         if (appts.isEmpty) {
-                          return const Text(
-                            "No appointments in this shift",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          return Center(
+                            child: Text(
+                              t.noAppointmentsInShift,
+                              style: theme.textTheme.bodyMedium!.copyWith(
+                                color: theme.hintColor,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           );
                         }
 
                         return Column(
                           children: appts.map((a) {
                             final m = a.data();
-                            final name = m['patientName'] ?? 'Unknown';
-                            final status = m['status'] ?? 'pending';
+                            final name = m['patientName'] ?? '—';
+                            final status = m['status'] ?? '—';
+
                             final rawTime = m['time'];
                             String time = '';
-
                             if (rawTime is Timestamp) {
                               final dt = rawTime.toDate().toLocal();
                               time =
@@ -184,21 +203,24 @@ class ShiftsOverviewScreen extends StatelessWidget {
                             return Container(
                               margin: const EdgeInsets.only(top: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE8F2F3),
+                                color: theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: ListTile(
-                                leading: const Icon(Icons.schedule,
-                                    color: Color(0xFF2D515C)),
+                                leading: Icon(
+                                  Icons.schedule,
+                                  color: theme.colorScheme.primary,
+                                ),
                                 title: Text(
                                   name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2D515C)),
+                                  style: theme.textTheme.titleMedium!.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                 ),
                                 subtitle: Text(
-                                  "Time: $time\nStatus: $status",
-                                  style: const TextStyle(color: Colors.black87),
+                                  "${t.timeLabel}: $time\n${t.statusLabel}: $status",
+                                  style: theme.textTheme.bodyMedium,
                                 ),
                                 isThreeLine: true,
                               ),

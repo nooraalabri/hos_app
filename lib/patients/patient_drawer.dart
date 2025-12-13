@@ -1,8 +1,13 @@
+// lib/patients/patient_drawer.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../l10n/app_localizations.dart';
+
+import '../routes.dart';
 import '../screens/settings_screen.dart';
 import '../screens/chatbot_screen.dart';
-import '../l10n/app_localizations.dart';
+
 import 'profile_page.dart';
 import 'search_page.dart';
 import 'appointment_page.dart';
@@ -21,13 +26,15 @@ class PatientDrawer extends StatelessWidget {
         required String route,
         Widget? screen,
       }) {
+    final cs = Theme.of(ctx).colorScheme;
+
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF2D515C)),
+      leading: Icon(icon, color: cs.primary),
       title: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: Color(0xFF2D515C),
+          color: cs.onSurface,
         ),
       ),
       onTap: () {
@@ -46,87 +53,130 @@ class PatientDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
     return Drawer(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(12),
           children: [
             const SizedBox(height: 10),
-            const CircleAvatar(
+
+            // ================= PROFILE ICON =================
+            CircleAvatar(
               radius: 36,
-              backgroundColor: Color(0xFF2D515C),
-              child: Icon(Icons.person, color: Colors.white, size: 32),
+              backgroundColor: cs.primary,
+              child: Icon(Icons.person, color: cs.onPrimary, size: 32),
             ),
+
             const SizedBox(height: 8),
+
             Center(
               child: Text(
-                AppLocalizations.of(context)!.patient,
-                style: const TextStyle(
-                  color: Color(0xFF5F7E86),
+                t.patient,
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
             ),
-            const Divider(),
 
-            //  روابط الصفحات
-            _item(context,
-                icon: Icons.person_outline,
-                text: AppLocalizations.of(context)!.my_profile,
-              route: ProfilePageBody.route,),
-            _item(context,
-                icon: Icons.search, 
-                text: AppLocalizations.of(context)!.search, 
-                route: SearchPage.route),
-            _item(context,
-                icon: Icons.event,
-                text: AppLocalizations.of(context)!.my_appointments,
-                route: AppointmentPage.route),
-            _item(context,
-                icon: Icons.receipt_long,
-                text: AppLocalizations.of(context)!.my_invoices,
-                route: PatientInvoicesScreen.route,
-                screen: const PatientInvoicesScreen()),
-            _item(context,
-                icon: Icons.payment,
-                text: AppLocalizations.of(context)!.payment ?? 'Payments',
-                route: PatientInvoicesScreen.route,
-                screen: const PatientInvoicesScreen()), // Payments are shown in invoices
-            _item(context,
-                icon: Icons.qr_code,
-                text: AppLocalizations.of(context)!.patient_qr_code,
-                route: QRPage.route),
-            _item(context,
-                icon: Icons.description_outlined,
-                text: AppLocalizations.of(context)!.medical_reports,
-                route: MedicalReportsPage.route),
-            _item(context,
-                icon: Icons.medication_outlined,
-                text: AppLocalizations.of(context)!.my_medicines,
-                route: MedicinesPage.route),
-            _item(context,
-                icon: Icons.smart_toy,
-                text: 'Chatbot',
-                route: '',
-                screen: const ChatbotScreen()),
-            _item(context,
-                icon: Icons.settings_outlined,
-                text: AppLocalizations.of(context)!.settings,
-                route: SettingsScreen.route),
+            const SizedBox(height: 10),
 
-            const Divider(height: 30),
+            Divider(color: cs.outlineVariant),
+
+            // ================= MENU ITEMS =================
+            _item(
+              context,
+              icon: Icons.person_outline,
+              text: t.myProfile,
+              route: AppRoutes.patientProfile,
+            ),
+
+            _item(
+              context,
+              icon: Icons.search,
+              text: t.search,
+              route: SearchPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.event,
+              text: t.myAppointments,
+              route: AppointmentPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.receipt_long,
+              text: t.my_invoices,
+              route: AppRoutes.patientInvoices,
+              screen: const PatientInvoicesScreen(),
+            ),
+
+            _item(
+              context,
+              icon: Icons.payment,
+              text: t.payment ?? 'Payment',
+              route: AppRoutes.patientInvoices,
+              screen: const PatientInvoicesScreen(), // Payments are shown in invoices
+            ),
+
+            _item(
+              context,
+              icon: Icons.qr_code,
+              text: t.patient_qr_code,
+              route: AppRoutes.patientQR,
+            ),
+
+            _item(
+              context,
+              icon: Icons.description_outlined,
+              text: t.medicalReports,
+              route: MedicalReportsPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.medication_outlined,
+              text: t.myMedicines,
+              route: MedicinesPage.route,
+            ),
+
+            _item(
+              context,
+              icon: Icons.smart_toy,
+              text: t.chatbot,
+              route: '',
+              screen: const ChatbotScreen(),
+            ),
+
+            _item(
+              context,
+              icon: Icons.settings_outlined,
+              text: t.settings,
+              route: SettingsScreen.route,
+            ),
+
+            Divider(color: cs.outlineVariant, height: 30),
+
+            // ================= LOGOUT =================
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
+              leading: Icon(Icons.logout, color: Colors.red.shade700),
               title: Text(
-                AppLocalizations.of(context)!.logout,
-                style: const TextStyle(
-                  color: Colors.red,
+                t.logout,
+                style: TextStyle(
+                  color: Colors.red.shade700,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               onTap: () async {
                 await FirebaseAuth.instance.signOut();
+
                 if (context.mounted) {
                   Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
                 }

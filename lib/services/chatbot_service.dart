@@ -1476,7 +1476,7 @@ class ChatbotService {
         "How can I assist you?";
   }
 
-  // Helper to check if message matches any keywords (exact phrase matching)
+  // Helper to check if message matches any keywords
   static bool _matches(String message, List<String> keywords) {
     return keywords.any((keyword) => message.contains(keyword));
   }
@@ -1491,3 +1491,4 @@ class ChatbotService {
     return keywords.any((keyword) => message.contains(keyword));
   }
 }
+
