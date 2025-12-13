@@ -21,30 +21,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get password => 'كلمة المرور';
 
   @override
-  String get dashboard => 'لوحة التحكم';
-
-  @override
-  String get enterAddressManually => 'أدخل العنوان يدويًا';
-
-  @override
-  String get pickDateRange => 'اختيار المدة الزمنية';
-
-  @override
-  String get medicineNotes => 'ملاحظات';
-
-  @override
-  String get daysPassed => 'الأيام المنقضية';
-
-  @override
-  String get remaining => 'المتبقي';
-
-  @override
-  String get dateRange => 'مدة الدواء';
-
-  @override
-  String get cannotCreatePastShift => 'لا يمكن إنشاء شفت في وقت سابق';
-
-  @override
   String get confirm_password => 'تأكيد كلمة المرور';
 
   @override
@@ -54,82 +30,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get welcome_back => 'مرحبًا بعودتك';
 
   @override
-  String get search_patient => 'بحث باسم المريض';
-
-  @override
-  String get diagnosis => 'التشخيص';
-
-  @override
-  String get manage_shifts => 'إدارة المناوبات';
-
-  @override
-  String get filter_by_date => 'تصفية حسب التاريخ';
-
-  @override
-  String get clear_filters => 'مسح الفلاتر';
-
-  @override
-  String get add_shift => 'إضافة مناوبة';
-
-  @override
-  String get doctor => 'الطبيب';
-
-  @override
-  String get date => 'التاريخ';
-
-  @override
-  String get start => 'البداية';
-
-  @override
-  String get end => 'النهاية';
-
-  @override
-  String get select_date => 'اختر التاريخ';
-
-  @override
-  String get select_time => 'اختر الوقت';
-
-  @override
-  String get fill_all_fields => 'يرجى تعبئة جميع الحقول';
-
-  @override
-  String get end_time_error => 'يجب أن يكون وقت النهاية بعد وقت البداية';
-
-  @override
-  String get shift_added => 'تمت إضافة المناوبة';
-
-  @override
-  String get shift_deleted => 'تم حذف المناوبة';
-
-  @override
-  String get saving => 'جاري الحفظ...';
-
-  @override
-  String get save => 'حفظ';
-
-  @override
-  String get error => 'خطأ:';
-
-  @override
-  String get cancel => 'إلغاء';
-
-  @override
-  String get delete => 'حذف';
-
-  @override
-  String get delete_shift => 'حذف المناوبة';
-
-  @override
-  String get delete_confirm => 'هل أنت متأكد أنك تريد حذف هذه المناوبة؟';
-
-  @override
-  String get search_doctor_or_spec => 'بحث باسم الطبيب أو التخصص';
-
-  @override
-  String get unknown => 'غير معروف';
-
-  @override
-  String get completed => 'مكتمل';
+  String get search => 'بحث';
 
   @override
   String get register => 'تسجيل';
@@ -141,7 +42,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fullname => 'الاسم الكامل';
 
   @override
-  String get phone => 'الهاتف';
+  String get phone => 'رقم الهاتف';
 
   @override
   String get specialization => 'التخصص';
@@ -159,7 +60,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get about => 'نبذة عن المستشفى';
 
   @override
+  String get save => 'حفظ';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
   String get edit => 'تعديل';
+
+  @override
+  String get delete => 'حذف';
 
   @override
   String get update => 'تحديث';
@@ -174,7 +84,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pending => 'قيد الانتظار';
 
   @override
-  String get approved => 'مقبول';
+  String get approved => 'تمت الموافقة';
 
   @override
   String get rejected => 'مرفوض';
@@ -196,6 +106,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get home => 'الصفحة الرئيسية';
+
+  @override
+  String get dashboard => 'لوحة التحكم';
 
   @override
   String get my_shifts => 'مناوباتي';
@@ -225,7 +138,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get view_details => 'عرض التفاصيل';
 
   @override
-  String get details => 'تفاصيل';
+  String get details => 'التفاصيل';
 
   @override
   String get settings => 'الإعدادات';
@@ -354,6 +267,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get select_role => 'اختر نوع الحساب';
 
   @override
+  String get doctor => 'الطبيب';
+
+  @override
   String get patient => 'مريض';
 
   @override
@@ -435,460 +351,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get qr_generated => 'تم إنشاء الرمز بنجاح';
 
   @override
-  String get manageShifts => 'إدارة المناوبات';
-
-  @override
-  String get filterByDateRange => 'تصفية حسب التاريخ';
-
-  @override
-  String get clearFilters => 'مسح الفلاتر';
-
-  @override
-  String get addShift => 'إضافة مناوبة';
-
-  @override
-  String get headAdmin => 'المدير العام';
-
-  @override
-  String get reviewHospitals => 'مراجعة المستشفيات';
-
-  @override
-  String get hospitalAdmin => 'مسؤول المستشفى';
-
-  @override
-  String get myProfile => 'ملفي الشخصي';
-
-  @override
-  String get hospitalProfileSubtitle => 'معلومات المستشفى و نبذة عنه';
-
-  @override
-  String get myStaff => 'طاقمي الطبي';
-
-  @override
-  String get myStaffSubtitle => 'إدارة الأطباء وبياناتهم';
-
-  @override
-  String get reportsOverview => 'أسبوعي / شهري / سنوي';
-
-  @override
-  String get addDoctor => 'إضافة دكتور';
-
-  @override
-  String get reviewHospitalsSubtitle => 'قبول أو رفض طلبات المستشفيات الجديدة';
-
-  @override
-  String get reports => 'التقارير';
-
-  @override
-  String get reportsSubtitle => 'عرض تفاصيل وإحصائيات كل مستشفى';
-
-  @override
-  String get myAppointments => 'مواعيدي';
-
-  @override
-  String get noAppointments => 'لا توجد مواعيد اليوم';
-
-  @override
-  String get timeLabel => 'الوقت';
-
-  @override
-  String get myMedicines => 'أدويتي';
-
-  @override
-  String get all => 'الكل';
-
-  @override
-  String get active => 'فعال';
-
-  @override
-  String get noMedicines => 'لا توجد أدوية.';
-
-  @override
-  String get dosage => 'الجرعة';
-
-  @override
-  String get schedule => 'الجدول';
-
-  @override
-  String get activeLabel => 'نشط';
-
-  @override
-  String get yes => 'نعم';
-
-  @override
-  String get searchAndBook => 'البحث والحجز';
-
-  @override
-  String get searchHint => 'ابحث بالاسم، التخصص، المستشفى أو الموقع...';
-
-  @override
-  String get hospitalTab => 'المستشفيات';
-
-  @override
-  String get specialisationTab => 'التخصصات';
-
-  @override
-  String get addOrUpdateReport => 'إضافة / تحديث تقرير';
-
-  @override
-  String get generalReport => 'التقرير العام';
-
-  @override
-  String get writeDiagnosis => 'اكتب التشخيص أو الملاحظات العامة';
-
-  @override
-  String get reportRequired => 'الرجاء كتابة التقرير';
-
-  @override
-  String get patientMedicalInfo => 'المعلومات الطبية للمريض';
-
-  @override
-  String get chronicDiseasesHint =>
-      'الأمراض المزمنة (افصل بينها باستخدام فاصلة)';
-
-  @override
-  String get allergies => 'الحساسية';
-
-  @override
-  String get prescription => 'الوصفة الطبية';
-
-  @override
-  String get medicine => 'الدواء';
-
-  @override
-  String get days => 'الأيام';
-
-  @override
-  String get reportAddUpdate => 'إضافة / تحديث تقرير';
-
-  @override
-  String get generalReportHint => 'اكتب التشخيص أو الملاحظات العامة';
-
-  @override
-  String get generalReportRequired => 'الرجاء كتابة التقرير';
-
-  @override
-  String get chronicHint => 'الأمراض المزمنة (افصل بينها باستخدام فاصلة)';
-
-  @override
-  String get allergyHint => 'الحساسية';
-
-  @override
-  String get medicineSection => 'الوصفة الطبية';
-
-  @override
-  String get medicineName => 'الدواء';
-
-  @override
-  String get medicineDosage => 'الجرعة';
-
-  @override
-  String get medicineDays => 'الأيام';
-
-  @override
-  String get medicineNameHint => 'اسم الدواء';
-
-  @override
-  String get medicineDosageHint => 'مثل 2× يومياً';
-
-  @override
-  String get medicineDaysHint => '3';
-
-  @override
-  String get medicineNotesHint => 'ملاحظات';
-
-  @override
-  String get addMedicine => 'إضافة دواء';
-
-  @override
-  String get previousReports => 'التقارير السابقة';
-
-  @override
-  String get noReports => 'لا توجد تقارير سابقة.';
-
-  @override
-  String get noDetails => 'لا توجد تفاصيل';
-
-  @override
-  String get dateLabel => 'التاريخ';
-
-  @override
-  String get saveReport => 'حفظ التقرير';
-
-  @override
-  String get saveReportSuccess => 'تم حفظ التقرير بنجاح';
-
-  @override
-  String get errorPrefix => 'خطأ:';
-
-  @override
-  String get requiredField => 'مطلوب';
-
-  @override
-  String get notes => 'ملاحظات';
-
-  @override
-  String get dosageExample => 'مثل 2× يومياً';
-
-  @override
-  String get daysExample => '3';
-
-  @override
-  String get noPreviousReports => 'لا توجد تقارير سابقة.';
-
-  @override
-  String get reportSaved => 'تم حفظ التقرير بنجاح';
-
-  @override
-  String get doctorTab => 'الأطباء';
-
-  @override
-  String get notSpecified => 'غير محدد';
-
-  @override
-  String get viewDoctors => 'عرض الأطباء';
-
-  @override
-  String get tapSeeDoctors => 'اضغطي لعرض الأطباء في هذا التخصص';
-
-  @override
-  String get seeDoctors => 'عرض الأطباء';
-
-  @override
-  String get noResults => 'لا توجد نتائج';
-
-  @override
-  String noDoctorsForHospital(Object name) {
-    return 'لا يوجد أطباء في \"$name\"';
-  }
-
-  @override
-  String noDoctorsForSpec(Object spec) {
-    return 'لا يوجد أطباء في تخصص \"$spec\"';
-  }
-
-  @override
-  String get specialisation => 'التخصص';
-
-  @override
-  String get viewShifts => 'عرض الشفتات';
-
-  @override
-  String get noShifts => 'لا يوجد شيفتات';
-
-  @override
-  String slotsAvailable(Object count) {
-    return 'عدد المواعيد المتاحة: $count';
-  }
-
-  @override
-  String get time => 'الوقت';
-
-  @override
-  String get confirmBooking => 'تأكيد الحجز';
-
-  @override
-  String confirmBookingQuestion(Object date, Object doctor, Object time) {
-    return 'هل تريدين حجز موعد مع $doctor بتاريخ $date الساعة $time؟';
-  }
-
-  @override
-  String alreadyBookedToday(Object doctor) {
-    return 'لديك بالفعل موعد مع $doctor اليوم.';
-  }
-
-  @override
-  String get slotBooked => 'هذا الوقت محجوز مسبقاً';
-
-  @override
-  String appointmentBooked(Object doctor, Object time) {
-    return 'تم حجز الموعد الساعة $time مع $doctor';
-  }
-
-  @override
-  String errorBooking(Object err) {
-    return 'خطأ أثناء الحجز: $err';
-  }
-
-  @override
-  String get patientQr => 'رمز الـ QR للمريض';
-
-  @override
-  String get scanQr => 'امسح هذا الرمز لعرض ملف المريض';
-
-  @override
-  String get patientIdNotFound => 'لم يتم العثور على رقم المريض';
-
-  @override
-  String get civilMustBe8Digits => 'يجب أن يكون الرقم المدني 8 أرقام بالضبط';
-
-  @override
-  String get phoneMustStartWith7or9 =>
-      'يجب أن يبدأ رقم الهاتف بـ 7 أو 9 ويتكون من 8 أرقام';
-
-  @override
-  String get weightHeightInvalid =>
-      'يجب أن يكون الوزن والطول أرقامًا صحيحة موجبة وبحد أقصى 3 أرقام';
-
-  @override
-  String get dob7days =>
-      'يجب أن يكون تاريخ الميلاد قبل اليوم بـ 7 أيام على الأقل';
-
-  @override
-  String get profileUpdated => 'تم تحديث الملف الشخصي بنجاح';
-
-  @override
-  String get profileNotFound => 'لم يتم العثور على ملف المستخدم';
-
-  @override
-  String get editProfile => 'تعديل الملف';
-
-  @override
-  String get personalInfo => 'المعلومات الشخصية';
-
-  @override
-  String get medicalInfoDoctorOnly => 'المعلومات الطبية (للطبيب فقط)';
-
-  @override
-  String get showQr => 'عرض رمز QR';
-
-  @override
-  String get name => 'الاسم';
-
-  @override
-  String get civilNumber => 'الرقم المدني';
-
-  @override
-  String get dob => 'تاريخ الميلاد';
-
-  @override
-  String get weight => 'الوزن (كجم)';
-
-  @override
-  String get height => 'الطول (سم)';
-
-  @override
-  String get bloodType => 'فصيلة الدم';
-
-  @override
-  String get chronicDiseases => 'الأمراض المزمنة';
-
-  @override
-  String get medications => 'الأدوية';
-
-  @override
-  String get condition => 'الحالة الصحية';
-
-  @override
-  String get editPersonalInfo => 'تعديل المعلومات الشخصية';
-
-  @override
-  String get no => 'لا';
-
-  @override
-  String get search => 'بحث';
-
-  @override
-  String get status => 'الحالة';
-
-  @override
-  String get appointmentCancelled => 'تم إلغاء الموعد';
-
-  @override
-  String get reschedule => 'إعادة جدولة';
-
-  @override
-  String get hospitalName => 'اسم المستشفى';
-
-  @override
-  String get medicalReports => 'التقارير الطبية';
-
-  @override
-  String get appointmentDay => 'يوم الموعد';
-
-  @override
-  String get noAvailableShifts => 'لا توجد مناوبات متاحة';
-
-  @override
-  String get rescheduledTo => 'تمت إعادة جدولة الموعد إلى';
-
-  @override
-  String get select => 'اختيار';
-
-  @override
-  String get dashboardSubtitle => 'نظرة أسبوعية / شهرية / سنوية';
-
-  @override
-  String get shiftAdded => 'تمت إضافة المناوبة';
-
-  @override
-  String get shiftUpdated => 'تم تحديث المناوبة';
-
-  @override
-  String get shiftDeleted => 'تم حذف المناوبة';
-
-  @override
-  String get deleteConfirm => 'هل أنت متأكد أنك تريد حذف هذه المناوبة؟';
-
-  @override
-  String get searchDoctorOrSpecialization => 'بحث باسم الطبيب أو التخصص';
-
-  @override
-  String get selectDate => 'اختر التاريخ';
-
-  @override
-  String get selectTime => 'اختر الوقت';
-
-  @override
-  String get completeAllFields => 'يرجى تعبئة جميع الحقول';
-
-  @override
-  String get endTimeAfterStart => 'يجب أن يكون وقت النهاية بعد وقت البداية';
-
-  @override
-  String get weekdayName => 'اليوم';
-
-  @override
   String get notifications_settings => 'إعدادات الإشعارات';
-
-  @override
-  String get fullName => 'الاسم الكامل';
-
-  @override
-  String get address => 'العنوان';
-
-  @override
-  String get profileImageUrl => 'رابط صورة الملف (اختياري)';
-
-  @override
-  String get saveChanges => 'حفظ التعديلات';
-
-  @override
-  String get saveSuccess => 'تم تحديث الملف بنجاح!';
-
-  @override
-  String get fillRequired => 'يرجى ملء جميع الحقول المطلوبة.';
-
-  @override
-  String get saveError => 'خطأ أثناء حفظ البيانات:';
-
-  @override
-  String get medicalRecord => 'السجل الطبي';
-
-  @override
-  String get medicalInfo => 'المعلومات الطبية';
-
-  @override
-  String get updateMedicalRecord => 'تحديث السجل الطبي';
-
-  @override
-  String get medicalRecordUpdated => 'تم تحديث السجل الطبي بنجاح';
-
-  @override
-  String get todaysAppointments => 'مواعيد اليوم';
-
-  @override
-  String get addUpdateReport => 'إضافة / تحديث تقرير';
 
   @override
   String get new_appointment => 'موعد جديد';
@@ -903,432 +366,417 @@ class AppLocalizationsAr extends AppLocalizations {
   String get doctor_reviewed => 'تم تقييم الطبيب';
 
   @override
-  String get reportDetails => 'تفاصيل التقرير';
+  String get thank_you => 'شكرًا لاستخدامك تطبيقنا!';
 
   @override
-  String get reportDate => 'تاريخ التقرير';
+  String get my_appointments => 'مواعيدي';
 
   @override
-  String get hospital_approval_requests => 'طلبات موافقة المستشفيات';
+  String get my_medicines => 'أدويتي';
 
   @override
-  String get no_pending_hospitals => 'لا توجد طلبات مستشفيات قيد الانتظار';
+  String get my_profile => 'ملفي الشخصي';
 
   @override
-  String get license_number => 'رقم الترخيص';
+  String get search_book => 'البحث والحجز';
 
   @override
-  String get cr_number => 'رقم السجل التجاري';
+  String get medical_reports => 'التقارير الطبية';
 
   @override
-  String get location_label => 'الموقع';
+  String get no_appointments_yet => 'لا توجد مواعيد بعد';
 
   @override
-  String get website => 'الموقع الإلكتروني';
+  String get no_reports => 'لا توجد تقارير';
 
   @override
-  String get created_at => 'تاريخ الإنشاء';
+  String get no_medicines => 'لا توجد أدوية';
 
   @override
-  String get image_not_available => 'الصورة غير متوفرة';
+  String get appointment_day => 'يوم الموعد';
 
   @override
-  String get accept => 'موافقة';
+  String get hospital_name_filter => 'اسم المستشفى';
 
   @override
-  String get new_password => 'كلمة المرور الجديدة';
+  String get invoice_details => 'تفاصيل الفاتورة';
 
   @override
-  String get doctorProfile => 'ملف الدكتور';
+  String get my_invoices => 'فواتيري';
 
   @override
-  String get quickAccess => 'الوصول السريع';
+  String get no_invoices_yet => 'لا توجد فواتير بعد';
 
   @override
-  String get myShifts => 'شيفتاتي';
+  String get pay_now => 'ادفع الآن';
 
   @override
-  String get weeklyShifts => 'مناوبات الأسبوع';
+  String get payment => 'الدفع';
 
   @override
-  String get doctorMenu => 'قائمة الدكتور';
+  String get card_details => 'تفاصيل البطاقة';
 
   @override
-  String get doctorDetails => 'تفاصيل الطبيب';
+  String get card_number => 'رقم البطاقة';
 
   @override
-  String get enterRecoveryCode => 'أدخلي رمز الاستعادة';
+  String get card_holder_name => 'اسم حامل البطاقة';
 
   @override
-  String get invalidOrExpired => 'الرمز غير صحيح أو منتهي';
+  String get expiry_date => 'تاريخ الانتهاء';
 
   @override
-  String get hintCode => '----';
+  String get cvv => 'CVV';
 
   @override
-  String get forgotPasswordTitle => 'نسيتِ\nكلمة المرور';
+  String get total_amount => 'المبلغ الإجمالي';
 
   @override
-  String get enterValidEmail => 'أدخلي بريد إلكتروني صحيح';
+  String get payment_completed => 'تم الدفع';
 
   @override
-  String get failedToSend => 'فشل إرسال الرمز. أعيدي المحاولة.';
+  String get paid_on => 'تم الدفع في';
 
   @override
-  String get weekly => 'أسبوعي';
+  String get payment_method => 'طريقة الدفع';
 
   @override
-  String get monthly => 'شهري';
+  String get transaction_id => 'رقم المعاملة';
 
   @override
-  String get yearly => 'سنوي';
+  String get appointment_details => 'تفاصيل الموعد';
 
   @override
-  String get hospitalsApproved => 'المستشفيات (مقبولة)';
+  String get doctor_information => 'معلومات الطبيب';
 
   @override
-  String get hospitalsPending => 'المستشفيات (قيد المراجعة)';
+  String get date => 'التاريخ';
 
   @override
-  String get doctorsApproved => 'الأطباء (مقبولون)';
+  String get time => 'الوقت';
 
   @override
-  String get doctorsPending => 'الأطباء (قيد المراجعة)';
+  String get status => 'الحالة';
 
   @override
-  String get patientsTotal => 'عدد المرضى';
+  String get consultation_fee => 'رسوم الاستشارة';
 
   @override
-  String get newUsers => 'مستخدمون جدد';
+  String get your_symptoms => 'أعراضك';
 
   @override
-  String get newHospitals => 'مستشفيات جديدة';
+  String get cancellation_reason => 'سبب الإلغاء';
 
   @override
-  String get hospitalsOverview => 'عرض المستشفيات';
+  String get diagnosis => 'التشخيص';
 
   @override
-  String get noApprovedHospitals => 'لا توجد مستشفيات معتمدة';
+  String get prescriptions => 'الوصفات الطبية';
 
   @override
-  String get city => 'المدينة';
+  String get dosage => 'الجرعة';
 
   @override
-  String get hospitalStats => 'الإحصائيات';
+  String get frequency => 'التكرار';
 
   @override
-  String get noData => 'لا توجد بيانات';
+  String get duration => 'المدة';
 
   @override
-  String get doctors => 'الأطباء';
+  String get days => 'أيام';
 
   @override
-  String get patients => 'المرضى';
+  String get instructions => 'التعليمات';
 
   @override
-  String get editHospital => 'تعديل المستشفى';
+  String get notes => 'الملاحظات';
 
   @override
-  String get hospitalDetails => 'تفاصيل المستشفى';
+  String get lab_tests => 'الفحوصات المخبرية';
 
   @override
-  String get hospitalReports => 'تقارير المستشفى';
+  String get your_review => 'تقييمك';
 
   @override
-  String get hospitalOverview => 'نظرة عامة على المستشفى';
+  String get rate_doctor => 'قيم الطبيب';
 
   @override
-  String get newRegister => 'تسجيلات جديدة';
+  String get rate_your_experience => 'قيم تجربتك';
 
   @override
-  String get visits => 'الزيارات';
+  String get how_was_experience => 'كيف كانت تجربتك؟';
 
   @override
-  String get noDoctors => 'لا يوجد أطباء';
+  String get share_feedback => 'شارك ملاحظاتك (اختياري)';
 
   @override
-  String get close => 'إغلاق';
+  String get submit => 'إرسال';
 
   @override
-  String get deleteDoctor => 'حذف الطبيب';
+  String get review_submitted => 'تم إرسال التقييم بنجاح';
 
   @override
-  String get deleteDoctorConfirm => 'هل أنتِ متأكدة من حذف هذا الطبيب؟';
+  String get error => 'خطأ';
 
   @override
-  String get doctorDeleted => 'تم حذف الطبيب';
+  String get patient_qr_code => 'رمز QR للمريض';
 
   @override
-  String get pendingApproval => 'قيد الموافقة';
+  String get scan_qr_view_profile => 'امسح هذا الرمز لعرض ملف المريض';
 
   @override
-  String get requestSubmitted => 'تم إرسال طلبك!';
+  String get all => 'الكل';
 
   @override
-  String get reviewingRegistration =>
-      'جاري مراجعة تسجيلك.\nسيتم إعلامك عند الموافقة.';
+  String get active => 'نشط';
 
   @override
-  String get signedInAs => 'تم تسجيل الدخول كـ:';
+  String get items => 'العناصر';
 
   @override
-  String get checkAgain => 'تحقّق مرة أخرى';
+  String get subtotal => 'المجموع الفرعي';
 
   @override
-  String get stillPending => 'ما زال الطلب قيد الانتظار. يرجى المحاولة لاحقًا.';
+  String get tax => 'الضريبة';
 
   @override
-  String get userProfileNotFound => 'لم يتم العثور على ملف المستخدم.';
+  String get total => 'الإجمالي';
 
   @override
-  String get pendingApprovalTitle => 'قيد الموافقة';
+  String get pending_status => 'قيد الانتظار';
 
   @override
-  String get registerDoctor => 'تسجيل دكتور';
+  String get paid_status => 'مدفوع';
 
   @override
-  String get validEmailRequired => 'يرجى إدخال بريد صحيح';
+  String get edit_personal_information => 'تعديل المعلومات الشخصية';
 
   @override
-  String get selectHospital => 'اختر مستشفى';
+  String get personal_information => 'المعلومات الشخصية';
 
   @override
-  String get passwordRequired => 'كلمة المرور مطلوبة';
+  String get medical_information_doctor_only => 'المعلومات الطبية (للطبيب فقط)';
 
   @override
-  String get passwordRules => '٨ أحرف على الأقل وتشمل حرف كبير، صغير، رقم ورمز';
+  String get name => 'الاسم';
 
   @override
-  String get confirmPassword => 'تأكيد كلمة المرور';
+  String get civil_number => 'الرقم المدني';
 
   @override
-  String get confirmPasswordRequired => 'يرجى إعادة إدخال كلمة المرور';
+  String get date_of_birth => 'تاريخ الميلاد';
 
   @override
-  String get passwordsDoNotMatch => 'كلمتا المرور غير متطابقتين';
+  String get weight_kg => 'الوزن (كجم)';
 
   @override
-  String get required => 'هذا الحقل مطلوب';
+  String get height_cm => 'الطول (سم)';
 
   @override
-  String get signUp => 'إنشاء حساب';
+  String get blood_type => 'فصيلة الدم';
 
   @override
-  String get noHospitalsFound =>
-      'لا توجد مستشفيات معتمدة. يرجى المحاولة لاحقًا.';
+  String get chronic_diseases => 'الأمراض المزمنة';
 
   @override
-  String get alreadyHaveAccount => 'لديك حساب بالفعل؟';
+  String get allergies => 'الحساسيات';
 
   @override
-  String get registerHospital => 'تسجيل مستشفى';
+  String get medications => 'الأدوية';
 
   @override
-  String get enterOfficialHospitalName => 'أدخلي الاسم الرسمي للمستشفى';
+  String get condition => 'الحالة';
 
   @override
-  String get licenseNumber => 'رقم الترخيص';
+  String get show_qr_code => 'عرض رمز QR';
 
   @override
-  String get mohLicenseNumber => 'رقم ترخيص وزارة الصحة';
+  String get saving => 'جاري الحفظ...';
 
   @override
-  String get crNumber => 'رقم السجل التجاري';
+  String get profile_updated_successfully => 'تم تحديث الملف الشخصي بنجاح';
 
   @override
-  String get enterCrNumber => 'أدخلي رقم السجل التجاري';
+  String get civil_number_must_be_8_digits => 'يجب أن يكون الرقم المدني 8 أرقام بالضبط';
 
   @override
-  String get phoneNumber => 'رقم الهاتف';
+  String get phone_must_start_with_7_or_9 => 'يجب أن يبدأ رقم الهاتف بـ 7 أو 9 ويكون 8 أرقام';
 
   @override
-  String get enterValidNumber => 'أدخلي رقماً صحيحاً';
+  String get weight_height_positive_numbers => 'يجب أن يكون الوزن والطول أرقامًا موجبة بحد أقصى 3 أرقام';
 
   @override
-  String get passwordRulesFull =>
-      '١٠ أحرف على الأقل وتشمل حرف كبير وصغير ورقم ورمز';
+  String get dob_must_be_7_days_before => 'يجب أن يكون تاريخ الميلاد قبل 7 أيام على الأقل من اليوم';
 
   @override
-  String get addressLocation => 'العنوان / الموقع';
+  String get profile_not_found => 'الملف الشخصي غير موجود';
 
   @override
-  String get enterFullAddress => 'العنوان الكامل أو رابط Google Maps';
+  String get patient_id_not_found => 'معرف المريض غير موجود';
 
   @override
-  String get websiteOptional => 'الموقع الإلكتروني (اختياري)';
+  String get confirm_booking => 'تأكيد الحجز';
 
   @override
-  String get myName => 'اسمي';
+  String book_doctor_on_date(Object date, Object doctorName, Object time) {
+    return 'احجز $doctorName في $date الساعة $time';
+  }
 
   @override
-  String get dateOfBirth => 'تاريخ الميلاد';
+  String already_have_appointment(Object doctorName) {
+    return 'لديك بالفعل موعد مع $doctorName اليوم.';
+  }
 
   @override
-  String get dobHint => 'YYYY-MM-DD';
+  String get time_already_booked => 'هذا الوقت محجوز بالفعل. يرجى اختيار وقت آخر.';
 
   @override
-  String get civilMustBe8 => 'يجب أن يكون 8 أرقام';
+  String appointment_booked(Object doctorName, Object time) {
+    return 'تم حجز الموعد في $time مع $doctorName';
+  }
 
   @override
-  String get passwordsNotMatch => 'كلمتا المرور غير متطابقتين';
+  String error_booking(Object error) {
+    return 'خطأ في الحجز: $error';
+  }
 
   @override
-  String get resetPasswordTitle => 'إعادة\nتعيين كلمة المرور';
+  String get no_available_shifts => 'لا توجد نوبات متاحة';
 
   @override
-  String get newPassword => 'كلمة المرور الجديدة';
+  String get no_available_times => 'لا توجد أوقات متاحة لليوم';
 
   @override
-  String get enterNewPassword => 'أدخلي كلمة المرور الجديدة';
+  String get view_doctors => 'عرض الأطباء';
 
   @override
-  String get confirmNewPassword => 'تأكيد كلمة المرور الجديدة';
+  String get see_doctors => 'عرض الأطباء';
 
   @override
-  String get reenterNewPassword => 'أعيدي إدخال كلمة المرور';
+  String get view_shifts => 'عرض النوبات';
 
   @override
-  String get passwordHintText =>
-      'يجب أن تحتوي كلمة المرور على ٨ أحرف على الأقل تشمل حرف كبير، صغير، رقم ورمز.';
+  String no_doctors_found(Object hospitalName) {
+    return 'لم يتم العثور على أطباء لـ \"$hospitalName\"';
+  }
 
   @override
-  String get passwordUpdated => 'تم تحديث كلمة المرور بنجاح';
+  String no_doctors_found_spec(Object spec) {
+    return 'لم يتم العثور على أطباء لـ \"$spec\"';
+  }
 
   @override
-  String get emailResetLink => 'تم إرسال رابط إعادة التعيين إلى بريدك.';
+  String get no_results_found => 'لم يتم العثور على نتائج';
 
   @override
-  String get noEmailFound => 'لا يوجد بريد لاستخدامه في إعادة التعيين.';
+  String get specialisation => 'التخصص';
 
   @override
-  String get notLoggedIn => 'غير مسجل دخول';
+  String location_not_specified(Object address) {
+    return 'الموقع: $address';
+  }
 
   @override
-  String get unknownRole => 'دور غير معروف';
+  String specialisation_not_specified(Object spec) {
+    return 'التخصص: $spec';
+  }
 
   @override
-  String get selectRole => 'اختاري الدور';
+  String get tap_see_doctors => 'اضغط لعرض الأطباء في هذا المجال';
 
   @override
-  String get roleHospital => 'مستشفى';
+  String get confirmed => 'مؤكد';
 
   @override
-  String get roleDoctor => 'دكتور';
+  String get completed => 'مكتمل';
 
   @override
-  String get rolePatient => 'مريض';
+  String get invoice => 'فاتورة';
 
   @override
-  String get welcomeTitle => 'نظام مواعيد المستشفى';
+  String get quantity => 'الكمية';
 
   @override
-  String get acceptReject => 'قبول / رفض';
+  String get invalid_amount => 'يرجى إدخال مبلغ صحيح';
+
+  @override
+  String get add_at_least_one_item => 'يرجى إضافة عنصر واحد على الأقل';
+
+  @override
+  String get invoice_generated_successfully => 'تم إنشاء الفاتورة بنجاح';
+
+  @override
+  String get generate_invoice => 'إنشاء فاتورة';
+
+  @override
+  String get invoice_items => 'عناصر الفاتورة';
+
+  @override
+  String get description => 'الوصف';
+
+  @override
+  String get amount => 'المبلغ';
+
+  @override
+  String get social_media => 'وسائل التواصل الاجتماعي';
+
+  @override
+  String get select_platform => 'اختر المنصة';
+
+  @override
+  String get write_post => 'اكتب منشورك';
+
+  @override
+  String get post_hint => 'ماذا يدور في ذهنك؟';
+
+  @override
+  String get post_too_long => 'المنشور طويل جداً (الحد الأقصى 2200 حرف)';
+
+  @override
+  String get post_to => 'نشر على';
+
+  @override
+  String get post_to_facebook => 'نشر على فيسبوك';
+
+  @override
+  String get recent_posts => 'المنشورات الأخيرة';
+
+  @override
+  String get no_posts_yet => 'لا توجد منشورات بعد';
+
+  @override
+  String get posted => 'تم النشر';
+
+  @override
+  String get instagram => 'إنستغرام';
+
+  @override
+  String get facebook => 'فيسبوك';
+
+  @override
+  String get twitter => 'تويتر';
+
+  @override
+  String get share_to => 'مشاركة على';
+
+  @override
+  String get shared => 'تمت المشاركة';
+
+  @override
+  String get view_record => 'عرض السجل';
+
+  @override
+  String get edit_report => 'تعديل التقرير';
+
+  @override
+  String get view_payment => 'عرض الدفع';
+
+  @override
+  String get view_invoice => 'عرض الفاتورة';
 
   @override
   String get chatbot => 'المساعد الذكي';
 
   @override
-  String get pickLocationOnMap => 'اختر الموقع على الخريطة';
-
-  @override
-  String get confirmLocation => 'تأكيد الموقع';
-
-  @override
-  String get pickFromMap => 'اضغطي لاختيار الموقع من الخريطة';
-
-  @override
-  String get doctorReports => 'تقارير الأطباء';
-
-  @override
-  String get patientReports => 'تقارير المرضى';
-
-  @override
-  String get welcomeBack => 'مرحباً بعودتك';
-
-  @override
-  String get enterYourEmail => 'أدخلي بريدك الإلكتروني';
-
-  @override
-  String get min8chars => 'الحد الأدنى 8 أحرف';
-
-  @override
-  String get forgotPasswordQ => 'نسيتِ كلمة المرور؟';
-
-  @override
-  String get newUser => 'مستخدمة جديدة؟';
-
-  @override
-  String get loginFailed => 'فشل تسجيل الدخول.';
-
-  @override
-  String get noAccountForEmail => 'لا يوجد حساب لهذا البريد.';
-
-  @override
-  String get incorrectPassword => 'كلمة المرور غير صحيحة.';
-
-  @override
-  String get invalidCredential => 'بيانات تسجيل الدخول غير صحيحة.';
-
-  @override
-  String get hospital_approved_msg => 'تمت الموافقة على المستشفى';
-
-  @override
-  String get hospital_rejected_msg => 'تم رفض المستشفى';
-
-  @override
-  String get approval_email_subject => 'موافقة على المستشفى';
-
-  @override
-  String get approval_email_text => 'تمت الموافقة على المستشفى من قبل الإدارة.';
-
-  @override
-  String get rejection_email_subject => 'رفض المستشفى';
-
-  @override
-  String get rejection_email_text => 'تم رفض تسجيل المستشفى.';
-
-  @override
-  String get doctor_approval_requests => 'طلبات موافقة الأطباء';
-
-  @override
-  String get no_pending_doctors => 'لا توجد طلبات أطباء قيد الانتظار';
-
-  @override
-  String get doctor_approved_msg => 'تمت الموافقة على الطبيب';
-
-  @override
-  String get doctor_rejected_msg => 'تم رفض الطبيب';
-
-  @override
-  String get approved_email_subject => 'تمت الموافقة على حسابك';
-
-  @override
-  String get approved_email_text => 'تمت الموافقة على حسابك من قبل الإدارة.';
-
-  @override
-  String get rejected_email_subject => 'تم رفض حسابك';
-
-  @override
-  String get rejected_email_text => 'نأسف، تم رفض طلب تسجيلك.';
-
-  @override
-  String get patientReviews => 'تقييمات المرضى';
-
-  @override
-  String get noReviews => 'لا توجد تقييمات بعد';
-
-  @override
-  String get noComment => 'لا توجد ملاحظات';
-
-  @override
-  String get daily => 'يومي';
-
-  @override
-  String get statusLabel => 'الحالة';
-
-  @override
-  String get noAppointmentsInShift => 'لا توجد مواعيد في هذا الشيفت';
-
-  @override
-  String get thank_you => 'شكرًا لاستخدامك تطبيقنا!';
+  String get appointment_cancelled => 'تم إلغاء الموعد';
 }

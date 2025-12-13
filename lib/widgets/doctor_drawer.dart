@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../l10n/app_localizations.dart';
 import '../screens/settings_screen.dart';
+import '../screens/chatbot_screen.dart';
 import '../screens/doctor/my_shifts_screen.dart';
 import '../screens/doctor/weekly_shifts_screen.dart';
 import '../screens/doctor/reviews.dart';
@@ -8,17 +8,10 @@ import '../screens/doctor/reviews.dart';
 class DoctorDrawer extends StatelessWidget {
   final String doctorId;
   final String doctorName;
-
-  const DoctorDrawer({
-    super.key,
-    required this.doctorId,
-    required this.doctorName,
-  });
+  const DoctorDrawer({super.key, required this.doctorId, required this.doctorName});
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!; // الترجمات
-
     return Drawer(
       child: Column(
         children: [
@@ -39,13 +32,14 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.person),
-            title: Text(t.myProfile),
-            onTap: () {},
+            title: const Text("My profile"),
+            onTap: () {
+            },
           ),
 
           ListTile(
             leading: const Icon(Icons.calendar_today),
-            title: Text(t.myShifts),
+            title: const Text("My shifts"),
             onTap: () {
               Navigator.push(
                 context,
@@ -58,7 +52,7 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.view_week),
-            title: Text(t.weeklyShifts),
+            title: const Text("Weekly Shifts"),
             onTap: () {
               Navigator.push(
                 context,
@@ -71,13 +65,20 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.smart_toy),
-            title: Text(t.chatbot),
-            onTap: () {},
+            title: const Text("Chatbot"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ChatbotScreen(),
+                ),
+              );
+            },
           ),
 
           ListTile(
             leading: const Icon(Icons.reviews),
-            title: Text(t.reviews),
+            title: const Text("Reviews"),
             onTap: () {
               Navigator.push(
                 context,
@@ -90,7 +91,7 @@ class DoctorDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.settings),
-            title: Text(t.settings),
+            title: const Text("Settings"),
             onTap: () {
               Navigator.push(
                 context,
@@ -114,8 +115,9 @@ class DoctorDrawer extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.logout, color: Colors.white),
-              label: Text(t.logout, style: const TextStyle(color: Colors.white)),
-              onPressed: () {},
+              label: const Text("Logout", style: TextStyle(color: Colors.white)),
+              onPressed: () {
+              },
             ),
           ),
         ],

@@ -12,108 +12,62 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appProvider = Provider.of<AppProvider>(context);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final loc = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        elevation: 0,
-        iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text(
-          AppLocalizations.of(context)!.settings,
-          style: TextStyle(color: cs.onSurface),
-        ),
+        title: Text(loc?.settings ?? "Settings"),
         actions: [
           IconButton(
-            icon: Icon(Icons.close, color: cs.onSurface),
+            icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
-
-      // ---------------- BODY ----------------
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            // ---------------- LANGUAGE ----------------
             DropdownButtonFormField<String>(
-              initialValue: appProvider.language,   // بديل value المُهمل
+              value: appProvider.language,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context)!.language,
-                labelStyle: TextStyle(color: cs.onSurface),
-                filled: true,
-
-                // surfaceVariant مُهمل → استبداله بـ surfaceContainerHighest
-                fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+                labelText: loc?.language ?? "Language",
               ),
-              dropdownColor: cs.surface,
               items: const [
                 DropdownMenuItem(value: "en", child: Text("English")),
                 DropdownMenuItem(value: "ar", child: Text("العربية")),
               ],
-              onChanged: (value) async {
+              onChanged: (value) {
                 if (value != null) {
-                  await Provider.of<AppProvider>(context, listen: false)
-                      .changeLanguage(value);
+                  appProvider.changeLanguage(value);
                 }
               },
             ),
-
             const SizedBox(height: 20),
-
-            // ---------------- DARK MODE SWITCH ----------------
             SwitchListTile(
-              title: Text(
-                AppLocalizations.of(context)!.dark_mode,
-                style: TextStyle(color: cs.onSurface),
-              ),
+              title: Text(loc?.dark_mode ?? "Dark Mode"),
               value: appProvider.isDarkMode,
-              onChanged: (value) => appProvider.toggleDarkMode(value),
-              secondary: Icon(Icons.nightlight_round, color: cs.onSurface),
-
-              // activeColor مُهمل → استبداله بخيارات جديدة:
-              activeThumbColor: cs.primary,
-              activeTrackColor: cs.primary.withValues(alpha: 0.4),
+              onChanged: (value) {
+                appProvider.toggleDarkMode(value);
+              },
+              secondary: const Icon(Icons.nightlight_round),
             ),
-
             const Divider(height: 40),
-
-            // ---------------- CHANGE PASSWORD ----------------
             ListTile(
-              leading: Icon(Icons.lock, color: cs.primary),
-              title: Text(
-                AppLocalizations.of(context)!.change_password,
-                style: TextStyle(color: cs.onSurface),
-              ),
+              leading: const Icon(Icons.lock),
+              title: Text(loc?.change_password ?? "Change Password"),
               onTap: () {
                 Navigator.pushNamed(context, ChangePasswordScreen.route);
               },
             ),
-
             const Spacer(),
-
-            // ---------------- LOGOUT BUTTON ----------------
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
               ),
               icon: const Icon(Icons.logout),
-              label: Text(AppLocalizations.of(context)!.logout),
+              label: Text(loc?.logout ?? "Logout"),
               onPressed: () {
                 Navigator.pushReplacement(
                   context,

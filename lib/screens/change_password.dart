@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../l10n/app_localizations.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/password_input.dart';
 import '../routes.dart';
+
 
 class ChangePasswordScreen extends StatefulWidget {
   static const route = '/change-password';
@@ -20,8 +20,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _new2 = TextEditingController();
 
   bool _loading = false;
-  String? _error;
-  String? _currentErr;
+  String? _error; // خطأ عام تحت الزر
+  String? _currentErr; // خطأ خاص بحقل current password
 
   final RegExp _passwordRe = RegExp(
       r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
@@ -47,16 +47,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  String? _validateNewPassword(String? v, AppLocalizations t) {
-    if (v == null || v.isEmpty) return t.required_field;
-    if (!_passwordRe.hasMatch(v)) return t.weak_password;
+  String? _validateNewPassword(String? v) {
+    if (v == null || v.isEmpty) return 'Password required';
+    if (!_passwordRe.hasMatch(v)) {
+      return 'Must have 8+ chars, upper, lower, number & symbol';
+    }
     return null;
   }
 
   Future<void> _submit() async {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     FocusScope.of(context).unfocus();
     setState(() {
       _loading = true;
@@ -65,11 +64,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     });
 
     try {
+      // 1️⃣ التحقق من إدخال كلمة المرور القديمة
       if (_current.text.trim().isEmpty) {
-        setState(() => _currentErr = t.required_field);
+        setState(() {
+          _currentErr = 'Enter your current password';
+        });
         return;
       }
 
+      // 2️⃣ التحقق من صحة كلمة المرور القديمة عبر Firebase
       final user = FirebaseAuth.instance.currentUser!;
       final cred = EmailAuthProvider.credential(
         email: user.email!,
@@ -79,37 +82,45 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       try {
         await user.reauthenticateWithCredential(cred);
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'wrong-password') {
-          setState(() => _currentErr = t.invalid_code);
+        if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+          setState(() {
+            _currentErr = 'Current password is incorrect';
+          });
           return;
         } else {
-          setState(() => _error = e.message ?? e.code);
+          setState(() {
+            _error = e.message ?? e.code;
+          });
           return;
         }
       }
 
+      // 3️⃣ التحقق أن الباسورد الجديد مو نفسه القديم
       if (_new1.text.trim() == _current.text.trim()) {
-        setState(() => _error = t.error_occurred);
+        setState(() {
+          _error = 'New password must be different from current password';
+        });
         return;
       }
 
+      // 4️⃣ التحقق من قوة الباسورد الجديد وتطابقه مع التأكيد
       if (!_form.currentState!.validate()) return;
 
       if (_new1.text != _new2.text) {
-        setState(() => _error = t.passwords_not_match);
+        setState(() {
+          _error = 'Passwords do not match';
+        });
         return;
       }
 
+      // 5️⃣ تحديث كلمة المرور الجديدة
       await user.updatePassword(_new1.text.trim());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              t.password_reset_success,
-              style: TextStyle(color: theme.colorScheme.onPrimary),
-            ),
-            backgroundColor: theme.colorScheme.primary,
+          const SnackBar(
+            content: Text('Password changed successfully'),
+            backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context);
@@ -123,11 +134,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -138,93 +145,68 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 children: [
                   const AppLogo(),
                   const SizedBox(height: 10),
-
-                  Text(
-                    t.change_password,
-                    style: theme.textTheme.headlineMedium!.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-
+                  Text('Change Password',
+                      style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 20),
 
-                  // CURRENT PASSWORD
+                  // 🟣 حقل كلمة المرور الحالية
                   TextFormField(
                     controller: _current,
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: t.password,
-                      prefixIcon: Icon(Icons.lock_outline,
-                          color: theme.colorScheme.primary),
+                      labelText: 'Current Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
                       errorText: _currentErr,
-                      filled: true,
-                      fillColor: theme.inputDecorationTheme.fillColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
 
-                  // NEW PASSWORD
+                  // 🟣 حقل الباسورد الجديد
                   PasswordInput(
                     controller: _new1,
-                    label: t.new_password,
-                    validator: (v) => _validateNewPassword(v, t),
+                    label: 'New Password',
+                    validator: _validateNewPassword,
                   ),
-
                   const SizedBox(height: 12),
 
-                  // CONFIRM PASSWORD
+                  // 🟣 حقل تأكيد الباسورد الجديد
                   PasswordInput(
                     controller: _new2,
-                    label: t.confirm_password,
+                    label: 'Confirm New Password',
                     validator: (v) =>
-                    v != _new1.text ? t.passwords_not_match : null,
+                    v != _new1.text ? 'Passwords do not match' : null,
                   ),
-
                   const SizedBox(height: 16),
 
+                  // 🔴 رسالة خطأ عامة
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       child: Text(
                         _error!,
-                        style: TextStyle(color: theme.colorScheme.error),
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
 
-                  // SAVE BUTTON
+                  // 🔘 زر الحفظ (نفس زر اللوج إن)
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
+                    onPressed: _loading ? null : _submit,
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: _loading ? null : _submit,
-                    child: _loading
-                        ? CircularProgressIndicator(
-                      color: theme.colorScheme.onPrimary,
-                    )
-                        : Text(
-                      t.save,
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                      child: _loading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Save'),
                     ),
                   ),
 
                   const SizedBox(height: 18),
-
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      t.back,
-                      style:
-                      TextStyle(color: theme.colorScheme.primary),
-                    ),
+                    child: const Text('Back to Home'),
                   ),
                 ],
               ),
