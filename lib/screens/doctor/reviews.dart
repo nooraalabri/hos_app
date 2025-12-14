@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../patients/patient_drawer.dart';
+import '../../patients/profile_page.dart';
 import '../../services/firestore_service.dart';
-import '../../l10n/app_localizations.dart';
+
+class ProfilePage extends StatelessWidget {
+  static const route = '/patient/profile'; // route ثابت للصفحة
+  const ProfilePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      drawer: PatientDrawer(),
+      body: SafeArea(
+        child: ProfilePageBody(),
+      ),
+    );
+  }
+}
 
 class ReviewsScreen extends StatelessWidget {
   final String doctorId;
@@ -9,21 +25,19 @@ class ReviewsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    // 🎨 ألوان موحدة من الثيم
+    const primaryColor = Color(0xFF00695C); // Teal 800
+    const lightColor = Color(0xFFE0F2F1);   // Teal 50
+    const accentColor = Color(0xFF009688);  // Teal 500
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: lightColor,
       appBar: AppBar(
-        backgroundColor: theme.colorScheme.primary,
-        title: Text(
-          t.patientReviews,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onPrimary,
-          ),
+        title: const Text(
+          "Patient Reviews",
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+        backgroundColor: primaryColor,
         centerTitle: true,
         elevation: 2,
       ),
@@ -31,19 +45,16 @@ class ReviewsScreen extends StatelessWidget {
         stream: FS.doctorReviews(doctorId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
-            );
+            return const Center(child: CircularProgressIndicator(color: primaryColor));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
+            return const Center(
               child: Text(
-                t.noReviews,
-                style: theme.textTheme.bodyLarge!.copyWith(
-                  color: theme.hintColor,
+                "No reviews yet",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -65,15 +76,13 @@ class ReviewsScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data!.docs
-            ..sort(
-                  (a, b) {
-                final dataA = a.data() as Map<String, dynamic>;
-                final dataB = b.data() as Map<String, dynamic>;
-                final t1 = _parseDate(dataA['createdAt']) ?? DateTime(0);
-                final t2 = _parseDate(dataB['createdAt']) ?? DateTime(0);
-                return t2.compareTo(t1);
-              },
-            );
+            ..sort((a, b) {
+              final dataA = a.data() as Map<String, dynamic>;
+              final dataB = b.data() as Map<String, dynamic>;
+              final t1 = _parseDate(dataA['createdAt']) ?? DateTime(0);
+              final t2 = _parseDate(dataB['createdAt']) ?? DateTime(0);
+              return t2.compareTo(t1);
+            });
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -81,8 +90,8 @@ class ReviewsScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final data = docs[i].data() as Map<String, dynamic>;
-              final patientName = data['patientName'] ?? '—';
-              final reviewText = data['review'] ?? data['comment'] ?? t.noComment;
+              final patientName = data['patientName'] ?? 'Unknown';
+              final reviewText = data['review'] ?? data['comment'] ?? 'No comment provided';
               final stars = (data['stars'] ?? data['rating'] ?? 0).toInt();
               final createdAt = _parseDate(data['createdAt']);
               final formattedDate = createdAt != null
@@ -90,82 +99,68 @@ class ReviewsScreen extends StatelessWidget {
                   : "—";
 
               return Card(
-                elevation: 3,
-                color: theme.cardColor,
+                elevation: 4,
+                color: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                  ),
+                  side: BorderSide(color: accentColor.withOpacity(0.2)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ======== Header Row ========
                       Row(
                         children: [
-                          CircleAvatar(
+                          const CircleAvatar(
                             radius: 18,
-                            backgroundColor: theme.colorScheme.primary,
-                            child: Icon(
-                              Icons.person,
-                              color: theme.colorScheme.onPrimary,
-                              size: 20,
-                            ),
+                            backgroundColor: accentColor,
+                            child: Icon(Icons.person, color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               patientName,
-                              style: theme.textTheme.titleMedium!.copyWith(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.primary,
+                                fontSize: 16,
+                                color: primaryColor,
                               ),
                             ),
                           ),
                           Text(
                             formattedDate,
-                            style: theme.textTheme.bodySmall!.copyWith(
-                              color: theme.hintColor,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 10),
-
-                      // ======== Stars ========
                       Row(
                         children: List.generate(
                           5,
                               (i) => Icon(
-                            i < stars
-                                ? Icons.star_rounded
-                                : Icons.star_border_rounded,
+                            i < stars ? Icons.star_rounded : Icons.star_border_rounded,
                             color: Colors.amber.shade600,
                             size: 22,
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
-                      // ======== Review Text ========
                       Container(
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHigh
-                              .withValues(alpha: 0.3),
+                          color: lightColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         padding: const EdgeInsets.all(12),
                         child: Text(
                           reviewText,
-                          style: theme.textTheme.bodyMedium!.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            height: 1.4,
+                          style: const TextStyle(
                             fontSize: 15,
+                            color: Colors.black87,
+                            height: 1.4,
                           ),
                         ),
                       ),

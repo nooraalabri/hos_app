@@ -9,8 +9,8 @@ import '../../models/invoice_model.dart';
 import '../../l10n/app_localizations.dart';
 import 'add_report_screen.dart';
 import 'generate_invoice_screen.dart';
-import 'doctor_invoice_detail_screen.dart';
 import 'medical_records.dart';
+import 'doctor_invoice_detail_screen.dart';
 import '../../services/notification_service.dart';
 
 class DoctorAppointmentsScreen extends StatefulWidget {

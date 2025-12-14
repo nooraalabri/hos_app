@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../l10n/app_localizations.dart';
+import 'package:hos_app/screens/pending_approval.dart';
 
-import '../screens/pending_approval.dart';
 import '../patients/patient_home.dart';
 import '../services/firestore_service.dart';
+import '../l10n/app_localizations.dart';
 import 'doctor_home.dart';
 import '../pages/hospital_admin_home.dart';
 import '../pages/head_admin_home.dart';
@@ -15,21 +15,12 @@ class RoleRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
+    final loc = AppLocalizations.of(context);
     final user = FirebaseAuth.instance.currentUser;
-
-    // ---------------- Not Logged In ----------------
     if (user == null) {
       return Scaffold(
-        backgroundColor: cs.surface,
         body: Center(
-          child: Text(
-            t.notLoggedIn,
-            style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
-          ),
+          child: Text(loc?.login ?? 'Not logged in'),
         ),
       );
     }
@@ -40,22 +31,12 @@ class RoleRouter extends StatelessWidget {
       stream: stream,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: cs.surface,
-            body: Center(
-              child: CircularProgressIndicator(color: cs.primary),
-            ),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-
         if (!snap.hasData || !snap.data!.exists) {
           return Scaffold(
-            backgroundColor: cs.surface,
             body: Center(
-              child: Text(
-                t.profileNotFound,
-                style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
-              ),
+              child: Text(loc?.no_data ?? 'User profile not found'),
             ),
           );
         }
@@ -66,13 +47,16 @@ class RoleRouter extends StatelessWidget {
 
         switch (role) {
           case 'patient':
+
             return const PatientHome();
 
           case 'doctor':
+
             if (!approved) return const PendingApprovalScreen();
             return DoctorHome(doctorId: user.uid);
 
           case 'hospitaladmin':
+
             if (!approved) return const PendingApprovalScreen();
             return const HospitalAdminHome();
 
@@ -81,13 +65,8 @@ class RoleRouter extends StatelessWidget {
 
           default:
             return Scaffold(
-              backgroundColor: cs.surface,
               body: Center(
-                child: Text(
-                  t.unknownRole,
-                  style:
-                  theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
-                ),
+                child: Text(loc?.error_occurred ?? 'Unknown role'),
               ),
             );
         }

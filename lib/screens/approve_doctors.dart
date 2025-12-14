@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../l10n/app_localizations.dart';
 import '../services/firestore_service.dart';
 import '../services/notify_service.dart';
 
@@ -9,30 +8,21 @@ class ApproveDoctorsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: FS.hospitalForAdmin(uid),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-              ),
-            ),
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (!snap.hasData || snap.data == null) {
-          return Scaffold(
+          return const Scaffold(
             body: Center(
-              child: Text(
-                t.no_data,
-                style: theme.textTheme.bodyMedium,
-              ),
+              child: Text("No hospital found for this admin"),
             ),
           );
         }
@@ -40,46 +30,24 @@ class ApproveDoctorsScreen extends StatelessWidget {
         final hospitalId = snap.data!['id'];
 
         return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: theme.colorScheme.primary,
-            title: Text(
-              t.doctor_approval_requests,
-              style: TextStyle(
-                color: theme.colorScheme.onPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            title: const Text("Doctor Approval Requests"),
             centerTitle: true,
-            iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
           ),
           body: StreamBuilder(
             stream: FS.pendingDoctorsStream(hospitalId),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: theme.colorScheme.primary,
-                  ),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
-
               if (snap.hasError) {
-                return Center(
-                  child: Text(
-                    "Error: ${snap.error}",
-                    style: theme.textTheme.bodyMedium!
-                        .copyWith(color: theme.colorScheme.error),
-                  ),
-                );
+                return Center(child: Text("Error: ${snap.error}"));
               }
-
               if (!snap.hasData || snap.data!.docs.isEmpty) {
-                return Center(
+                return const Center(
                   child: Text(
-                    t.no_pending_doctors,
-                    style: theme.textTheme.bodyLarge!
-                        .copyWith(color: theme.hintColor),
+                    "No pending doctor requests",
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                 );
               }
@@ -92,12 +60,10 @@ class ApproveDoctorsScreen extends StatelessWidget {
                 itemBuilder: (ctx, i) {
                   final d = docs[i].data();
                   final doctorId = docs[i].id;
-                  final name = d['name'] ?? t.unknown;
+                  final name = d['name'] ?? 'Unknown Doctor';
                   final email = d['email'] ?? '';
 
                   return Card(
-                    color: theme.cardColor,
-                    shadowColor: theme.shadowColor.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -110,109 +76,114 @@ class ApproveDoctorsScreen extends StatelessWidget {
                         children: [
                           Text(
                             name,
-                            style: theme.textTheme.titleMedium!.copyWith(
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             email,
-                            style: theme.textTheme.bodyMedium!
-                                .copyWith(color: theme.hintColor),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
                           ),
                           const SizedBox(height: 14),
-
-                          // ===== ACTION BUTTONS =====
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              // APPROVE
+                              //  زر الـ Approve
                               ElevatedButton(
                                 onPressed: () async {
                                   await FS.decideDoctor(
-                                    doctorUid: doctorId,
-                                    status: 'approved',
-                                  );
+                                      doctorUid: doctorId, approve: true);
 
+                                  //  إرسال إيميل للدكتور بعد الموافقة
                                   await NotifyService.sendEmail(
                                     to: email,
-                                    subject: t.approved_email_subject,
-                                    text:
-                                    "${t.approved_email_text}\n\n${t.hospital_admin}",
-                                  );
+                                    subject: 'Doctor Account Approved',
+                                    text: '''
+Dear Dr. $name,
 
-                                  if (!context.mounted) return;
+Your registration request has been approved by the hospital administration.
+You can now log in to your account and start using the system.
+
+Best regards,
+Hospital Administration
+''',
+                                  );
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor:
-                                      theme.colorScheme.primary,
                                       content: Text(
-                                        '${t.doctor_approved_msg} - $name',
-                                        style: TextStyle(
-                                          color:
-                                          theme.colorScheme.onPrimary,
-                                        ),
-                                      ),
+                                          'Doctor "$name" has been APPROVED and notified by email.'),
+                                      backgroundColor: Colors.green,
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                  theme.colorScheme.primary,
-                                  foregroundColor:
-                                  theme.colorScheme.onPrimary,
+                                  backgroundColor: Colors.green,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                child: Text(
-                                  t.accept,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
+                                child: const Text(
+                                  "Accept",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
+
                               const SizedBox(width: 12),
 
-                              // REJECT
+                              //  زر الـ Reject
                               ElevatedButton(
                                 onPressed: () async {
                                   await FS.decideDoctor(
-                                    doctorUid: doctorId,
-                                    status: 'rejected',
-                                  );
+                                      doctorUid: doctorId, approve: false);
 
+                                  //  إرسال إيميل رفض
                                   await NotifyService.sendEmail(
                                     to: email,
-                                    subject: t.rejected_email_subject,
-                                    text:
-                                    "${t.rejected_email_text}\n\n${t.hospital_admin}",
-                                  );
+                                    subject: 'Doctor Account Rejected',
+                                    text: '''
+Dear Dr. $name,
 
-                                  if (!context.mounted) return;
+We regret to inform you that your registration request has been rejected.
+If you believe this was a mistake, please contact the hospital administration.
+
+Best regards,
+Hospital Administration
+''',
+                                  );
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor: theme
-                                          .colorScheme.errorContainer,
                                       content: Text(
-                                        '${t.doctor_rejected_msg} - $name',
-                                        style: TextStyle(
-                                          color: theme.colorScheme
-                                              .onErrorContainer,
-                                        ),
-                                      ),
+                                          'Doctor "$name" has been REJECTED and notified by email.'),
+                                      backgroundColor: Colors.redAccent,
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme
-                                      .colorScheme.errorContainer,
-                                  foregroundColor: theme
-                                      .colorScheme.onErrorContainer,
+                                  backgroundColor: Colors.redAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                child: Text(
-                                  t.reject,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
+                                child: const Text(
+                                  "Reject",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
